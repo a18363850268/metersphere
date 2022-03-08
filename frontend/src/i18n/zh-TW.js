@@ -232,6 +232,8 @@ export default {
     reference_settings: "场景设置",
     enable_scene_info: "啟用場景環境：當前步驟使用場景原始環境配置運行",
     environment: "運行環境",
+    run: "運行",
+    delete_batch: "批量刪除",
     run_success: "執行成功",
     run_completed: "執行完成",
     run_warning: "正在運行中，請稍後查看",
@@ -1071,6 +1073,7 @@ export default {
     stopthread: '停止線程',
     stoptest: '停止測試',
     stoptestnow: '立即停止測試',
+    batch_delete_confirm: "确认批量删除性能测试",
     report: {
       diff: "對比",
       set_default: '恢復默認',
@@ -1181,7 +1184,7 @@ export default {
       api_path: "路徑",
       api_definition_path: "API路徑",
       api_case_path: "用例路徑",
-      api_principal: "負責人",
+      api_principal: "責任人",
       api_last_time: "最後更新時間",
       api_case_number: "用例數",
       api_case_status: "用例狀態",
@@ -1284,6 +1287,8 @@ export default {
         esb_title: "可以在報文模板中使用${參數名} 或 ${父節點參數名.子節點參數名}來生成xml數據結構",
       },
       document: {
+        open: "展開",
+        close: "收起",
         order: "排序方式",
         create_time_sort: "按創建時間從後到前",
         edit_time_positive_sequence: "按更新時間從前到後",
@@ -2338,6 +2343,7 @@ export default {
       delete: "刪除缺陷",
       title_description_required: "標題和描述必填",
       close_success: "關閉成功",
+      delete_warning: "解除會影響測試計畫相關統計，是否確認",
       preview: "預覽",
       status_new: '新建',
       status_resolved: '已解決',
@@ -2357,6 +2363,7 @@ export default {
       update_third_party_bugs: "更新第三方平臺的缺陷",
       sync_bugs: "同步缺陷",
       save_before_open_comment: "請先保存缺陷再添加評論",
+      delete_tip: "確認刪除缺陷："
     },
     report: {
       name: "測試計劃報告",
@@ -2818,12 +2825,12 @@ export default {
       read: "查詢",
       edit: "編輯"
     },
-    workspace_message: {
+    project_message: {
       name: "消息設置",
       read: "查詢",
       edit: "編輯"
     },
-    workspace_template: {
+    project_template: {
       name: "模版設置",
       read: "查詢",
       case_template: "用例模版",

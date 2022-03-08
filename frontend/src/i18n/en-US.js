@@ -1,7 +1,7 @@
 export default {
   commons: {
     project_permission: 'Please add the project permission first',
-    no_permission:'No permission yet',
+    no_permission: 'No permission yet',
     failure_continues: "Failure continues",
     full_screen_editing: "Full screen editing",
     trash: "Trash",
@@ -231,6 +231,8 @@ export default {
     enable_scene_info: "Enable scene environment: the current step uses the original environment configuration of the scene to run",
     edit_info: "Edit details",
     environment: "Environment",
+    run: "Run",
+    delete_batch: "Delete Batch",
     run_success: "Run Success",
     run_completed: "Run Completed",
     run_fail: "Run Fail",
@@ -241,8 +243,8 @@ export default {
     cancel_follow_success: "Cancel Follow Success",
     generate_test_data: "Generate test data",
     type: "Type",
-    type_of_num:"Please enter an integer type",
-    validity_period:'Validity Period',
+    type_of_num: "Please enter an integer type",
+    validity_period: 'Validity Period',
     please_select_a_deadline: "Please select a deadline",
     relationship: {
       name: 'Dependencies',
@@ -1066,6 +1068,7 @@ export default {
     stopthread: 'Stop thread',
     stoptest: 'Stop test',
     stoptestnow: 'Stop the test immediately',
+    batch_delete_confirm: "Confirm batch delete performance test",
     report: {
       diff: "Compare",
       set_default: 'Set to Default',
@@ -1149,14 +1152,14 @@ export default {
       rule: {
         input_code: "Please input HTTP Code"
       },
-      range_type:{
+      range_type: {
         value_eq: "value=",
         value_not_eq: "value!=",
-        value_contain:"include=",
+        value_contain: "include=",
         length_eq: "length=",
         length_not_eq: "length!=",
-        length_large_than:"length>",
-        length_shot_than:"length<",
+        length_large_than: "length>",
+        length_shot_than: "length<",
         regular_match: "Regular match",
       }
     },
@@ -1279,6 +1282,8 @@ export default {
         esb_title: "You can use ${name} or ${parent name.child name} to generate xml struct in report template",
       },
       document: {
+        open: "Open",
+        close: "Close",
         order: "Order",
         create_time_sort: "From back to front by create time",
         edit_time_positive_sequence: "From front to back by update time",
@@ -2334,6 +2339,7 @@ export default {
       delete: "Delete",
       title_description_required: "Title and description are required",
       close_success: "Closed successfully",
+      delete_warning: "The cancellation will affect the statistics related to the test plan. Confirm whether to confirm or not",
       preview: "Preview",
       status_new: 'new',
       status_resolved: 'resolved',
@@ -2353,6 +2359,7 @@ export default {
       update_third_party_bugs: "Update the defects of third-party platforms",
       sync_bugs: "Synchronization Issue",
       save_before_open_comment: "Please save issue before comment",
+      delete_tip: "Confirm Delete Issue："
     },
     report: {
       name: "Test Plan Report",
@@ -2816,12 +2823,12 @@ export default {
       read: "READ",
       edit: "EDIT",
     },
-    workspace_message: {
+    project_message: {
       name: "Message",
       read: "READ",
       edit: "EDIT",
     },
-    workspace_template: {
+    project_template: {
       name: "Template",
       read: "READ",
       case_template: "CASE TEMPLATE",
@@ -3039,8 +3046,8 @@ export default {
       delete: "DELETE",
       read: "READ",
     },
-    personal_information:{
-      name:'Setting',
+    personal_information: {
+      name: 'Setting',
       personal_setting: 'Personal Setting',
       api_keys: 'API Keys',
       edit_password: "EDIT PASSWORD",

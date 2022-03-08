@@ -232,6 +232,8 @@ export default {
     reference_settings: "场景设置",
     enable_scene_info: "启用场景环境：当前步骤使用场景原始环境配置运行",
     environment: "运行环境",
+    run: "运行",
+    delete_batch: "批量删除",
     run_success: "执行成功",
     run_completed: "执行完成",
     run_warning: "正在运行中，请稍后查看",
@@ -1071,6 +1073,7 @@ export default {
     stopthread: '停止线程',
     stoptest: '停止测试',
     stoptestnow: '立即停止测试',
+    batch_delete_confirm: "确认批量删除性能测试",
     report: {
       diff: "对比",
       set_default: '恢复默认',
@@ -1181,7 +1184,7 @@ export default {
       api_path: "路径",
       api_definition_path: "API路径",
       api_case_path: "用例路径",
-      api_principal: "负责人",
+      api_principal: "责任人",
       api_last_time: "最后更新时间",
       api_case_number: "用例数",
       api_case_status: "用例状态",
@@ -1284,6 +1287,8 @@ export default {
         esb_title: "可以在报文模板中使用${参数名} 或 ${父节点参数名.子节点参数名}来生成xml数据结构",
       },
       document: {
+        open: "展开",
+        close: "收起",
         order: "排序方式",
         create_time_sort: "按创建时间从后到前",
         edit_time_positive_sequence: "按更新时间从前到后",
@@ -2339,6 +2344,7 @@ export default {
       delete: "删除缺陷",
       title_description_required: "标题和描述必填",
       close_success: "关闭成功",
+      delete_warning: "解除会影响测试计划相关统计，是否确认",
       preview: "预览",
       status_new: '新建',
       status_resolved: '已解决',
@@ -2358,6 +2364,7 @@ export default {
       update_third_party_bugs: "更新第三方平台的缺陷",
       sync_bugs: "同步缺陷",
       save_before_open_comment: "请先保存缺陷再添加评论",
+      delete_tip: "确认删除缺陷："
     },
     report: {
       name: "测试计划报告",
@@ -2819,12 +2826,12 @@ export default {
       read: "查询",
       edit: "编辑"
     },
-    workspace_message: {
+    project_message: {
       name: "消息设置",
       read: "查询",
       edit: "编辑"
     },
-    workspace_template: {
+    project_template: {
       name: "模版设置",
       read: "查询",
       case_template: "用例模版",
