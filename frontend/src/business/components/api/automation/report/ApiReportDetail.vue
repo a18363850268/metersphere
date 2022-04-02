@@ -7,7 +7,9 @@
                                      :debug="debug" :report="report" @reportExport="handleExport"
                                      @reportSave="handleSave"/>
           <main v-if="isNotRunning">
-            <ms-metric-chart :content="content" :totalTime="totalTime"/>
+
+            <ms-metric-chart :content="content" :totalTime="totalTime" :report="report"/>
+
             <div>
               <el-tabs v-model="activeName" @tab-click="handleClick">
                 <el-tab-pane :label="$t('api_report.total')" name="total">
@@ -24,10 +26,17 @@
                 </el-tab-pane>
                 <el-tab-pane name="errorReport" v-if="content.errorCode > 0">
                   <template slot="label">
-                    <span class="fail">{{ $t('error_report_library.option.name') }}</span>
+                    <span class="fail" style="color: #F6972A">{{ $t('error_report_library.option.name') }}</span>
                   </template>
                   <ms-scenario-results v-on:requestResult="requestResult" :console="content.console"
                                        :treeData="fullTreeNodes" ref="errorReportTree"/>
+                </el-tab-pane>
+                <el-tab-pane name="unExecute" v-if="content.unExecute > 0">
+                  <template slot="label">
+                    <span class="fail" style="color: #9C9B9A">{{ $t('api_test.home_page.detail_card.unexecute') }}</span>
+                  </template>
+                  <ms-scenario-results v-on:requestResult="requestResult" :console="content.console"
+                                       :treeData="fullTreeNodes" ref="unExecuteTree"/>
                 </el-tab-pane>
                 <el-tab-pane name="console">
                   <template slot="label">
@@ -129,6 +138,8 @@ export default {
         this.$refs.failsTree.filter(index);
       } else if (this.activeName === "errorReport") {
         this.$refs.errorReportTree.filter("errorReport");
+      } else if(this.activeName === "unExecute"){
+        this.$refs.unExecuteTree.filter("unexecute");
       }
     },
     init() {
@@ -327,15 +338,21 @@ export default {
         this.buildReport();
       } else if (this.isShare) {
         getShareScenarioReport(this.shareId, this.reportId, (data) => {
+          this.checkReport(data);
           this.handleGetScenarioReport(data);
         });
       } else {
         getScenarioReport(this.reportId, (data) => {
+          this.checkReport(data);
           this.handleGetScenarioReport(data);
         });
       }
     },
-
+    checkReport(data) {
+      if (!data) {
+        this.$emit('reportNotExist');
+      }
+    },
     handleGetScenarioReport(data) {
       if (data) {
         this.report = data;
@@ -453,6 +470,9 @@ export default {
     formatExportApi(array, scenario) {
       array.forEach(item => {
         if (this.stepFilter && this.stepFilter.get("AllSamplerProxy").indexOf(item.type) !== -1) {
+          if(item.errorCode){
+            item.value.errorCode = item.errorCode;
+          }
           scenario.requestResults.push(item.value);
         }
         if (item.children && item.children.length > 0) {
@@ -462,14 +482,14 @@ export default {
     },
     handleExport() {
       if (this.report.reportVersion && this.report.reportVersion > 1) {
-        if (this.report.reportType === 'API_INTEGRATED') {
+        if (this.report.reportType === 'API_INTEGRATED' || this.report.reportType === 'UI_INTEGRATED') {
           let scenario = {name: "", requestResults: []};
           this.content.scenarios = [scenario];
           this.formatExportApi(this.fullTreeNodes, scenario);
         } else {
           if (this.fullTreeNodes) {
             this.fullTreeNodes.forEach(item => {
-              if (item.type === "scenario") {
+              if (item.type === "scenario" || item.type === "UiScenario") {
                 let scenario = {name: item.label, requestResults: []};
                 if (this.content.scenarios && this.content.scenarios.length > 0) {
                   this.content.scenarios.push(scenario);
@@ -523,6 +543,9 @@ export default {
     },
     projectId() {
       return getCurrentProjectID();
+    },
+    isUi() {
+      return this.report.reportType && this.report.reportType.startsWith("UI");
     },
   }
 }

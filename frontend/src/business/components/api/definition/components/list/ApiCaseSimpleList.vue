@@ -416,6 +416,7 @@ export default {
       statusFilters: [
         {text: this.$t('api_test.automation.success'), value: 'success'},
         {text: this.$t('api_test.automation.fail'), value: 'error'},
+        {text: this.$t('error_report_library.option.name'), value: 'errorReportResult'},
         {text: this.$t('report.stop_btn'), value: 'STOP'},
         {text: this.$t('api_test.home_page.detail_card.unexecute'), value: ''},
         {text: this.$t('commons.testing'), value: 'Running'}
@@ -535,7 +536,7 @@ export default {
     },
     '$store.state.currentApiCase.refresh'() {
       if (this.$store.state.currentApiCase.refresh) {
-        this.initTable();
+        this.setStatus(this.$store.state.currentApiCase.id, this.$store.state.currentApiCase.status);
       }
       this.$store.state.currentApiCase = {};
     }
@@ -634,6 +635,14 @@ export default {
     },
     customHeader() {
       this.$refs.caseTable.openCustomHeader();
+    },
+    setStatus(id, status) {
+      this.tableData.forEach(item => {
+        if (id && id === item.id) {
+          item.status = status;
+          item.execResult = status;
+        }
+      });
     },
     initTable(id) {
       this.timeoutIndex = 0;
@@ -806,6 +815,8 @@ export default {
         }
         selectApi.url = request.path;
         this.$refs.caseList.runTestCase(selectApi, testCase.id);
+        let obj = {id:testCase.id};
+        this.$post('/api/testcase/updateExecuteInfo', obj);
       });
     },
     handleTestCase(testCase) {

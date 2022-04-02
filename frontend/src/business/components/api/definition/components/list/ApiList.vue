@@ -431,6 +431,7 @@ export default {
       selectDataCounts: 0,
       projectName: "",
       versionEnable: false,
+      isFirstInitTable:true,
     };
   },
   props: {
@@ -631,12 +632,17 @@ export default {
             if (item.tags && item.tags.length > 0) {
               item.tags = JSON.parse(item.tags);
             }
+            item.caseTotal = parseInt(item.caseTotal);
           });
           this.$emit('getTrashApi');
         });
       }
       if (this.needRefreshModule()) {
-        this.$emit("refreshTree");
+        if(this.isFirstInitTable){
+          this.isFirstInitTable = false;
+        }else {
+          this.$emit("refreshTree");
+        }
       }
     },
     getMaintainerOptions() {

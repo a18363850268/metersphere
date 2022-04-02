@@ -10,7 +10,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.metersphere.api.dto.definition.parse.JMeterScriptUtil;
 import io.metersphere.api.dto.definition.request.ElementUtil;
 import io.metersphere.api.dto.definition.request.ParameterConfig;
-import io.metersphere.api.dto.definition.request.assertions.MsAssertions;
 import io.metersphere.api.dto.scenario.DatabaseConfig;
 import io.metersphere.api.dto.scenario.KeyValue;
 import io.metersphere.api.dto.scenario.environment.EnvironmentConfig;
@@ -84,6 +83,8 @@ public class MsJDBCSampler extends MsTestElement {
         // 非导出操作，且不是启用状态则跳过执行
         if (config != null && !config.isOperating() && !this.isEnable()) {
             return;
+        }else if(config.isOperating() && StringUtils.isNotEmpty(config.getOperatingSampleTestName())){
+            this.setName(config.getOperatingSampleTestName());
         }
         if (this.getReferenced() != null && MsTestElementConstants.REF.name().equals(this.getReferenced())) {
             boolean ref = this.setRefElement();
@@ -101,6 +102,10 @@ public class MsJDBCSampler extends MsTestElement {
 
         // 数据兼容处理
         if (config.getConfig() != null && StringUtils.isNotEmpty(this.getProjectId()) && config.getConfig().containsKey(this.getProjectId())) {
+            EnvironmentConfig environmentConfig = config.getConfig().get(this.getProjectId());
+            if(environmentConfig.getDatabaseConfigs() != null){
+                this.environmentId = environmentConfig.getApiEnvironmentid();
+            }
             // 1.8 之后 当前正常数据
         } else if (config.getConfig() != null && config.getConfig().containsKey(getParentProjectId())) {
             // 1.8 前后 混合数据
@@ -145,7 +150,8 @@ public class MsJDBCSampler extends MsTestElement {
                 envConfig = this.initDataSource();
             }
             if (this.dataSource == null) {
-                MSException.throwException("数据源为空无法执行");
+                String message = "数据源为空请选择数据源";
+                MSException.throwException(StringUtils.isNotEmpty(this.getName()) ? this.getName() + "：" + message : message);
             }
         }
         final HashTree samplerHashTree = tree.add(jdbcSampler(config));
@@ -172,6 +178,7 @@ public class MsJDBCSampler extends MsTestElement {
         JMeterScriptUtil.setScriptByEnvironmentConfig(envConfig, samplerHashTree, GlobalScriptFilterRequest.JDBC.name(), environmentId, config, false);
 
         if (CollectionUtils.isNotEmpty(hashTree)) {
+            hashTree = ElementUtil.order(hashTree);
             hashTree.forEach(el -> {
                 el.toHashTree(samplerHashTree, el.getHashTree(), config);
             });

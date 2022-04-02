@@ -7,7 +7,7 @@
           <el-input v-model="form.name" autocomplete="off"></el-input>
         </el-form-item>
 
-        <el-form-item v-if="platformOptions.length > 1" :label-width="labelWidth"
+        <el-form-item v-if="platformOptions.length >= 1" :label-width="labelWidth"
                       :label="$t('test_track.issue.third_party_integrated')"
                       prop="platform">
           <el-select filterable v-model="form.platform">
@@ -17,14 +17,14 @@
         </el-form-item>
 
         <el-form-item :label-width="labelWidth" :label="$t('workspace.case_template_manage')" prop="caseTemplateId">
-          <template-select :data="form" scene="API_CASE" prop="caseTemplateId" ref="caseTemplate"/>
+          <template-select :data="form" scene="API_CASE" prop="caseTemplateId" ref="caseTemplate" :project-id="form.id"/>
         </el-form-item>
 
         <el-form-item :label-width="labelWidth"
                       :label="$t('workspace.issue_template_manage')" prop="issueTemplateId">
           <template-select :platform="form.platform" :data="form" scene="ISSUE" prop="issueTemplateId"
                            :disabled="form.platform === 'Jira' && form.thirdPartTemplate"
-                           :platformOptions="issueOptions"
+                           :platformOptions="issueOptions" :project-id="form.id"
                            ref="issueTemplate"/>
 
           <el-checkbox @change="thirdPartTemplateChange" v-if="form.platform === 'Jira'"
@@ -39,12 +39,17 @@
         </el-form-item>
         <el-form-item :label-width="labelWidth" :label="$t('project.tapd_id')" v-if="tapd">
           <el-input v-model="form.tapdId" autocomplete="off"></el-input>
+          <el-button @click="check" type="primary" class="checkButton">{{ $t('test_track.issue.check_id_exist') }}</el-button>
         </el-form-item>
 
-        <project-jira-config v-if="jira" :label-width="labelWidth" :form="form"/>
-
+        <project-jira-config v-if="jira" :label-width="labelWidth" :form="form">
+          <template #checkBtn>
+            <el-button @click="check" type="primary" class="checkButton">{{ $t('test_track.issue.check_id_exist') }}</el-button>
+          </template>
+        </project-jira-config>
         <el-form-item :label-width="labelWidth" :label="$t('project.zentao_id')" v-if="zentao">
           <el-input v-model="form.zentaoId" autocomplete="off"></el-input>
+          <el-button @click="check" type="primary" class="checkButton">{{ $t('test_track.issue.check_id_exist') }}</el-button>
           <ms-instructions-icon effect="light">
             <template>
               禅道流程：产品-项目 | 产品-迭代 | 产品-冲刺 | 项目-迭代 | 项目-冲刺 <br/><br/>
@@ -150,7 +155,8 @@ export default {
       screenHeight: 'calc(100vh - 195px)',
       labelWidth: '150px',
       platformOptions: [],
-      issueOptions: []
+      issueOptions: [],
+      issueTemplateId: ""
     };
   },
   props: {
@@ -186,6 +192,15 @@ export default {
     this.createVisible = false;
   },
   methods: {
+    check() {
+      if (!this.form.id) {
+        this.$warning(this.$t("test_track.issue.save_project_first"));
+        return;
+      }
+      this.$post("/project/check/third/project", this.form, () => {
+        this.$success("OK");
+      });
+    },
     getOptions() {
       if (this.$refs.issueTemplate) {
         this.$refs.issueTemplate.getTemplateOptions();
@@ -206,6 +221,7 @@ export default {
         this.title = this.$t('project.edit');
         row.issueConfigObj = row.issueConfig ? JSON.parse(row.issueConfig) : {};
         this.form = Object.assign({}, row);
+        this.issueTemplateId = row.issueTemplateId;
       } else {
         this.form = {issueConfigObj: {}};
       }
@@ -244,6 +260,10 @@ export default {
           this.form.workspaceId = getCurrentWorkspaceId();
           this.form.createUser = getCurrentUserId();
           this.form.issueConfig = JSON.stringify(this.form.issueConfigObj);
+          if (this.issueTemplateId !== this.form.issueTemplateId) {
+            // 更换缺陷模版移除字段
+            localStorage.removeItem("ISSUE_LIST");
+          }
           this.result = this.$post("/project/" + saveType, this.form, () => {
             this.createVisible = false;
             this.reload();
@@ -308,5 +328,9 @@ pre {
 
 .el-input, .el-textarea {
   width: 80%;
+}
+
+.checkButton {
+  margin-left: 5px;
 }
 </style>

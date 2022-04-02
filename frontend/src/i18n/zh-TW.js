@@ -44,11 +44,14 @@ export default {
     confirm_delete: '是否刪除',
     delete_cancelled: '已取消刪除',
     workspace: '工作空間',
+    space:'空間',
+    current_workspace:"當前工作空間",
     organization: '組織',
     setting: '設置',
     project: '項目',
     about_us: '關於',
     current_project: '當前項目',
+    not_exist:"不存在",
     name: '名稱',
     description: '描述',
     annotation: '註釋',
@@ -243,7 +246,8 @@ export default {
     follow_success: "關註成功",
     cancel_follow_success: "取消關註成功",
     type: "類型",
-    type_of_num:"請輸入整數類型",
+    type_of_integer: "請輸入整數類型",
+    type_of_num:"請輸入數字類型",
     validity_period:'有效期',
     please_select_a_deadline: "請選擇截止時間",
     relationship: {
@@ -415,6 +419,7 @@ export default {
     open_source_version: "開源版",
     function_planning: "功能正在規劃中...",
     enterprise_edition_tips: "此功能為企業版功能，<a href='https://metersphere.io/enterprise.html' target='_blank'>詳情請諮詢</a>",
+    ui_edition_tips: "UI自動化為企業版功能，可在官網申請試用",
     system_data: "系統數據",
     system_user: "系統用戶",
     system_workspace: "工作空間",
@@ -440,6 +445,7 @@ export default {
     delete_current_version: '列表版本',
     delete_all_version: '全部版本',
     change_password_tips: '您的密碼是系統初始密碼，請盡快修改密碼',
+    ui: 'UI 測試',
   },
   login: {
     normal_Login: "普通登錄",
@@ -909,6 +915,7 @@ export default {
   report: {
     id: '報告ID',
     api_test_report: '接口測試報告',
+    scenario_test_report: '場景測試報告',
     load_test_report: '性能測試報告',
     test_plan_report: '測試計劃報告',
     report_sharing_link: '報告分享鏈接',
@@ -1121,6 +1128,7 @@ export default {
     batch_copy: "批量復製",
     export_config: "導出",
     enable_validate_tip: "沒有可用請求",
+    unplanned_case: "未規劃用例",
     copy: "復製測試",
     please_select_case: "請選擇用例",
     fail_to_stop: "失敗停止",
@@ -1321,8 +1329,11 @@ export default {
       case_reduction_error_text: "請先恢復"
     },
     automation: {
-      open_expansion: "一鍵展開",
-      close_expansion: "一鍵收起",
+      open_check_message: "勾選步驟太多，最大可支持展開20個一級步驟",
+      open_expansion: "批量展開步驟",
+      close_expansion: "批量折疊步驟",
+      bulk_activation_steps: "批量啟用步驟",
+      batch_disable_steps: "批量禁用步驟",
       all: "全部",
       constant: "常量",
       counter: "計數器",
@@ -1350,6 +1361,8 @@ export default {
       scenario_test: "場景",
       scenario_list: "場景列表",
       add_scenario: "創建場景",
+      all_scenario: "全部場景",
+      unplanned_scenario: "未規劃場景",
       scenario_name: "場景名稱",
       case_level: "用例等級",
       tag: "標簽",
@@ -1467,6 +1480,7 @@ export default {
       scenario_error: "不能引用或復製自身！",
       integrated: "集合",
       independent: "獨立",
+      step_info: "在右側添加場景步驟",
     },
     request: {
       debug: "調試",
@@ -1869,10 +1883,10 @@ export default {
       execute_before_step_tip: "每一個API步驟執行前均執行一次，如請求內容加密",
       execute_post_step: "單個請求步驟後執行",
       execute_post_step_tip: "每一個API步驟執行後均執行一次，如響應內容解密",
-      execute_before_all_steps: "所有請求步驟前執行",
-      execute_before_all_steps_tip: "全部API流程開始前執行一次，如token獲取及場景初始化",
-      execute_post_all_steps: "所有請求步驟後執行",
-      execute_post_all_steps_tip: "全部API流程結束後執行一次，如數據銷毀及環境重置",
+      execute_before_all_steps: "所有場景步驟前執行",
+      execute_before_all_steps_tip: "全部場景開始前執行一次，如token獲取及場景初始化",
+      execute_post_all_steps: "所有場景步驟後執行",
+      execute_post_all_steps_tip: "全部場景結束後執行一次，如數據銷毀及環境重置",
       after_the_pre_script_step: "步驟內前置腳本後",
       before_the_pre_script_step: "步驟內前置腳本前",
       after_the_post_script_step: "步驟內後置腳本後",
@@ -2124,6 +2138,7 @@ export default {
       plan_status_running: "進行中",
       plan_status_finished: "已結束",
       plan_status_completed: "已完成",
+      plan_status_archived: "已歸檔",
       plan_status_trash: "廢棄",
       planned_start_time: "計劃開始",
       planned_end_time: "計劃結束",
@@ -2226,6 +2241,7 @@ export default {
       name: "模塊名稱",
       delete_confirm: "確認刪除模塊: ",
       delete_all_resource: "以及模塊下所有子模塊和測試用例",
+      delete_batch_confirm: "確認批量刪除勾選的場景步驟？",
       module: "模塊",
       title: "標題",
       status: "狀態",
@@ -2363,7 +2379,9 @@ export default {
       update_third_party_bugs: "更新第三方平臺的缺陷",
       sync_bugs: "同步缺陷",
       save_before_open_comment: "請先保存缺陷再添加評論",
-      delete_tip: "確認刪除缺陷："
+      delete_tip: "確認刪除缺陷：",
+      check_id_exist: "檢查",
+      save_project_first: "請先保存項目"
     },
     report: {
       name: "測試計劃報告",
@@ -2440,6 +2458,7 @@ export default {
     SMTP_port: 'SMTP端口',
     SMTP_account: 'SMTP賬戶',
     SMTP_password: 'SMTP密碼',
+    SMTP_from: '指定发件人',
     SSL: '開啟SSL(如果SMTP端口是465，通常需要啟用SSL)',
     TLS: '開啟TLS(如果SMTP端口是587，通常需要啟用TLS)',
     SMTP: '是否免密 SMTP',
@@ -2616,7 +2635,7 @@ export default {
   },
   variables: {
     cvs_info: "只能上傳CSV文件",
-    csv_message: "默認展示2000條，完整的內容可點擊下載查看。",
+    csv_message: "默認展示500條，完整的內容可點擊下載查看。",
     end: "結束",
     start: "開始",
     increment: "增量",
@@ -3003,6 +3022,23 @@ export default {
       create_performance_batch: "批量創建性能測試",
       batch_copy: "批量復製",
     },
+    project_ui_scenario: {
+      name: "UI自動化",
+      read: "查詢場景",
+      create: "創建場景",
+      edit: "編輯場景",
+      delete: "刪除場景",
+      copy: "復製場景",
+      run: "執行場景",
+      debug: "調試場景",
+      schedule: "定時任務",
+      import: "導入場景",
+      export: "導出場景",
+      move_batch: "批量移動",
+      create_performance: "創建性能測試",
+      create_performance_batch: "批量創建性能測試",
+      batch_copy: "批量復製",
+    },
     project_api_report: {
       name: "測試報告",
       read: "查詢報告",
@@ -3059,6 +3095,7 @@ export default {
     other: {
       track: "測試跟蹤",
       api: "接口測試",
+      ui: "UI測試",
       performance: "性能測試",
       project: "項目設置",
       report: "報表統計"
@@ -3070,6 +3107,7 @@ export default {
   error_report_library: {
     name: "誤報庫",
     assertion: "誤報斷言",
+    tips:"注：在\"項目設置-設置環境-全局斷言\"中啟用誤報將進行以下規則匹配",
     use_error_report: "啟用誤報",
     use_desc: "失敗斷言與誤報規則衝突時統一處理為誤報",
     option: {
@@ -3084,5 +3122,10 @@ export default {
     match_type: {
       text: "文本"
     }
+  },
+  ui: {
+    ui_automation: "UI 自動化",
+    ui_element: "元素庫",
+    report: "測試報告",
   }
 };

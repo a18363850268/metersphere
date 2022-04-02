@@ -193,10 +193,6 @@ export default {
           value:'workspaceId',
         },
         {
-          label:this.$t('report.id'),
-          value:'reportId',
-        },
-        {
           label:this.$t('commons.name'),
           value:'name',
         },
@@ -268,7 +264,7 @@ export default {
           label: this.$t('report.plan_share_url'),
           value: 'planShareUrl',
         },
-      ]
+      ],
     };
   },
   activated() {

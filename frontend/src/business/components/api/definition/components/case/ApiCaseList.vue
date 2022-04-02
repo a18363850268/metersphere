@@ -12,6 +12,7 @@
           :project-id="projectId"
           :useEnvironment="environment"
           :is-case-edit="isCaseEdit"
+          :button-text="saveButtonText"
           ref="header"/>
       </template>
 
@@ -40,7 +41,7 @@
     </ms-drawer>
 
     <!-- 执行组件 -->
-    <ms-run :debug="false" :reportId="reportId" :run-data="runData" :env-map="envMap"
+    <ms-run :debug="false" :reportId="reportId" :run-data="runData" :env-map="envMap" :edit-case-request="true"
             @runRefresh="runRefresh" @errorRefresh="errorRefresh" ref="runTest"/>
     <ms-task-center ref="taskCenter" :show-menu="false"/>
   </div>
@@ -68,6 +69,7 @@ export default {
       type: Boolean,
       default: false
     },
+    saveButtonText:String,
     refreshSign: String,
     currentApi: {
       type: Object
@@ -132,8 +134,8 @@ export default {
         this.maintainerOptions = response.data;
       });
     },
-    close(){
-      if(this.$refs.testCaseDrawer){
+    close() {
+      if (this.$refs.testCaseDrawer) {
         this.$refs.testCaseDrawer.close();
       }
     },
@@ -142,7 +144,7 @@ export default {
       // testCaseId 不为空则为用例编辑页面
       this.testCaseId = testCaseId;
       this.condition = {components: API_CASE_CONFIGS};
-      this.getApiTest(true);
+      this.getApiTest(true, true);
       this.visible = true;
       this.$store.state.currentApiCase = undefined;
 
@@ -240,18 +242,18 @@ export default {
     refreshModule() {
       this.$emit('refreshModule');
     },
-    runRefresh() {
+    runRefresh(data) {
       this.batchLoadingIds = [];
       this.singleLoading = false;
       this.singleRunId = "";
-      // 批量更新最后执行环境
-      let obj = {envId: this.environment, show: true};
-      this.batchEdit(obj);
-      this.runResult = {testId: getUUID()};
-      this.$refs.apiCaseItem.runLoading = false;
-      this.$success(this.$t('organization.integration.successful_operation'));
-      this.$store.state.currentApiCase = {refresh: true};
-      this.getTestCase();
+      this.apiCaseList[0].active = true;
+      if (data) {
+        let status = data.error > 0 ? "error" : "success";
+        this.apiCaseList[0].execResult = status
+        this.runResult = data;
+        this.$refs.apiCaseItem.runLoading = false;
+        this.$store.state.currentApiCase = {refresh: true, id: data.id, status: status};
+      }
     },
     errorRefresh() {
       this.batchLoadingIds = [];
@@ -294,7 +296,7 @@ export default {
         })
       }
     },
-    getTestCase() {
+    getTestCase(openCase) {
       return new Promise((resolve) => {
         let commonUseEnvironment = this.$store.state.useEnvironment;
         this.environment = commonUseEnvironment ? commonUseEnvironment : "";
@@ -302,6 +304,9 @@ export default {
           let apiCase = response.data;
           if (apiCase) {
             this.formatCase(apiCase);
+            if (openCase) {
+              apiCase.active = true;
+            }
             this.apiCaseList = [apiCase];
           }
           resolve();
@@ -323,11 +328,11 @@ export default {
         });
       }
     },
-    getApiTest(addCase) {
+    getApiTest(addCase, openCase) {
       if (this.loaded) {
         this.getApiLoadCase();
       } else {
-        this.getTestCase().then(() => {
+        this.getTestCase(openCase).then(() => {
           if (addCase && !this.loaded && this.apiCaseList.length === 0) {
             this.addCase();
           }
@@ -386,6 +391,7 @@ export default {
       row.request.name = row.id;
       row.request.useEnvironment = this.environment;
       row.request.projectId = this.projectId;
+      row.request.id = row.id;
       this.runData.push(row.request);
       /*触发执行操作*/
       this.reportId = getUUID().substring(0, 8);

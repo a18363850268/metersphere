@@ -1,19 +1,16 @@
 package io.metersphere.notice.sender;
 
-import com.alibaba.fastjson.JSON;
 import io.metersphere.commons.constants.NoticeConstants;
 import io.metersphere.commons.user.SessionUser;
 import io.metersphere.dto.BaseSystemConfigDTO;
 import io.metersphere.notice.annotation.SendNotice;
 import io.metersphere.notice.service.NoticeSendService;
 import io.metersphere.service.SystemParameterService;
-import org.apache.commons.beanutils.BeanMap;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.Resource;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -26,30 +23,16 @@ public class AfterReturningNoticeSendService {
     private NoticeSendService noticeSendService;
 
     @Async
-    public void sendNotice(SendNotice sendNotice, Object retValue, SessionUser sessionUser) {
-        //
-        List<Map> resources = new ArrayList<>();
-        String source = sendNotice.source();
-        if (StringUtils.isNotBlank(source)) {
-            // array
-            if (StringUtils.startsWith(source, "[")) {
-                resources.addAll(JSON.parseArray(source, Map.class));
-            }
-            // map
-            else {
-                Map<?, ?> value = JSON.parseObject(source, Map.class);
-                resources.add(value);
-            }
-        } else {
-            resources.add(new BeanMap(retValue));
-        }
+    public void sendNotice(SendNotice sendNotice, List<Map> resources, SessionUser sessionUser, String currentProjectId) {
+
         // 有批量操作发送多次
+        BaseSystemConfigDTO baseSystemConfigDTO = systemParameterService.getBaseInfo();
         for (Map resource : resources) {
             Map paramMap = new HashMap<>();
-            BaseSystemConfigDTO baseSystemConfigDTO = systemParameterService.getBaseInfo();
             paramMap.put("url", baseSystemConfigDTO.getUrl());
             paramMap.put("operator", sessionUser.getName());
             paramMap.putAll(resource);
+            paramMap.putIfAbsent("projectId", currentProjectId);
             // 占位符
             handleDefaultValues(paramMap);
 

@@ -138,6 +138,11 @@ public class ProjectController {
         return checkPermissionService.getUserRelatedProjectIds();
     }
 
+    @GetMapping("/getOwnerProjects")
+    public List<ProjectDTO>  getOwnerProjects() {
+        return checkPermissionService.getOwnerProjects();
+    }
+
     @GetMapping("/genTcpMockPort/{id}")
     public String genTcpMockPort(@PathVariable String id){
         return projectService.genTcpMockPort(id);
@@ -146,5 +151,10 @@ public class ProjectController {
     @GetMapping("version/enable/{projectId}")
     public boolean isVersionEnable(@PathVariable String projectId) {
         return projectService.isVersionEnable(projectId);
+    }
+
+    @PostMapping("/check/third/project")
+    public void checkThirdProjectExist(@RequestBody Project project) {
+        projectService.checkThirdProjectExist(project);
     }
 }

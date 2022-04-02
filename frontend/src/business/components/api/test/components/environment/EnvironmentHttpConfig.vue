@@ -378,7 +378,7 @@ export default {
         return;
       }
       const index = this.httpConfig.conditions.findIndex((d) => d.id === row.id);
-      let obj = {id: getUUID(), type: row.type, socket: row.socket, details: row.details, protocol: row.protocol, headers: JSON.parse(JSON.stringify(this.condition.headers)), domain: row.domain, time: new Date().getTime()};
+      let obj = {id: getUUID(), type: row.type, socket: row.socket, details: row.details, protocol: row.protocol, headers: JSON.parse(JSON.stringify(row.headers)), domain: row.domain, time: new Date().getTime()};
       if (index != -1) {
         this.httpConfig.conditions.splice(index, 0, obj);
       } else {
@@ -420,12 +420,12 @@ export default {
       let keyValues = [];
       params.forEach(item => {
         let line = item.split(/：|:/);
+        let values = item.split(line[0] + ":");
         let required = false;
         keyValues.unshift(new KeyValue({
           name: line[0],
           required: required,
-          value: line[1],
-          description: line[2],
+          value: values[1],
           type: "text",
           valid: false,
           file: false,

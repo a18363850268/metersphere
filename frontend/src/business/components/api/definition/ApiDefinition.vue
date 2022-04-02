@@ -199,6 +199,7 @@
               <ms-debug-tcp-page
                 :currentProtocol="currentProtocol"
                 :testCase="item.api"
+                :scenario="false"
                 @saveAs="editApi"
                 @refreshModule="refreshModule"
                 v-if="currentProtocol==='TCP'"/>
@@ -267,7 +268,7 @@ import MockConfig from "@/business/components/api/definition/components/mock/Moc
 import ApiSchedule from "@/business/components/api/definition/components/import/ApiSchedule";
 import MsEditCompleteContainer from "./components/EditCompleteContainer";
 import MsEnvironmentSelect from "./components/case/MsEnvironmentSelect";
-import {PROJECT_ID} from "@/common/js/constants";
+import {PROJECT_ID, WORKSPACE_ID} from "@/common/js/constants";
 
 
 const requireComponent = require.context('@/business/components/xpack/', true, /\.vue$/);
@@ -418,20 +419,28 @@ export default {
     },
   },
   created() {
+    let workspaceId = this.$route.params.workspaceId;
+    if (workspaceId) {
+      sessionStorage.setItem(WORKSPACE_ID, workspaceId);
+    }else {
+      if(this.$route.query.workspaceId){
+        workspaceId = this.$route.query.workspaceId;
+        sessionStorage.setItem(WORKSPACE_ID, workspaceId);
+      }
+    }
     let projectId = this.$route.params.projectId;
     if (projectId) {
       sessionStorage.setItem(PROJECT_ID, projectId);
-    }
-    if (this.$route.query.projectId) {
-      sessionStorage.setItem(PROJECT_ID, this.$route.query.projectId);
+    }else {
+      if (this.$route.query.projectId) {
+        projectId = this.$route.query.projectId;
+        sessionStorage.setItem(PROJECT_ID, this.$route.query.projectId);
+      }
     }
     this.getEnv();
     // 通知过来的数据跳转到编辑
     if (this.$route.query.caseId) {
       this.activeDom = 'middle';
-      // this.$get('/api/testcase/findById/' + this.$route.query.caseId, (response) => {
-      //   this.edit(response.data);
-      // });
     }
   },
   mounted() {

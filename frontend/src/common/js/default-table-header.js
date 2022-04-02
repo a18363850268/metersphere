@@ -82,6 +82,23 @@ export let CUSTOM_TABLE_HEADER = {
     {id: 'passRate', key: 'b', label: 'api_test.automation.passing_rate'},
     {id: 'createTime', key: 'c', label: 'commons.create_time'},
   ],
+  //场景测试
+  UI_SCENARIO: [
+    {id: 'num', key: '1', label: "ID"},
+    {id: 'name', key: '2', label: 'api_report.scenario_name'},
+    {id: 'level', key: '3', label: 'api_test.automation.case_level'},
+    {id: 'status', key: '4', label: 'test_track.plan.plan_status'},
+    {id: 'tags', key: '5', label: 'commons.tag'},
+    {id: 'versionId', key: 'f', label: 'project.version.name', xpack: true},
+    {id: 'creatorName', key: 'd', label: 'api_test.automation.creator'},
+    {id: 'principalName', key: '6', label: 'api_test.definition.api_principal'},
+    {id: 'environmentMap', key: 'e', label: 'commons.environment'},
+    {id: 'updateTime', key: '7', label: 'api_test.definition.api_last_time'},
+    {id: 'stepTotal', key: '8', label: 'api_test.automation.step'},
+    {id: 'lastResult', key: 'a', label: 'api_test.automation.last_result'},
+    {id: 'passRate', key: 'b', label: 'api_test.automation.passing_rate'},
+    {id: 'createTime', key: 'c', label: 'commons.create_time'},
+  ],
   //用例评审
   TEST_CASE_REVIEW: [
     {id: 'name', key: '1', label: 'test_track.review.review_name'},
@@ -110,7 +127,6 @@ export let CUSTOM_TABLE_HEADER = {
   //测试计划
   TEST_PLAN_LIST: [
     {id: 'name', key: '1', label: 'commons.name'},
-    {id: 'userName', key: '2', label: 'test_track.plan.plan_principal'},
     {id: 'status', key: '3', label: 'test_track.plan.plan_status'},
     {id: 'stage', key: '4', label: 'test_track.plan.plan_stage'},
     {id: 'testRate', key: '5', label: 'test_track.home.test_rate'},
@@ -127,7 +143,8 @@ export let CUSTOM_TABLE_HEADER = {
     {id: 'testPlanTestCaseCount', key: 'g', label: 'test_track.plan.test_plan_test_case_count'},
     {id: 'testPlanApiCaseCount', key: 'h', label: 'test_track.plan.test_plan_api_case_count'},
     {id: 'testPlanApiScenarioCount', key: 'i', label: 'test_track.plan.test_plan_api_scenario_count'},
-    {id: 'testPlanLoadCaseCount', key: 'j', label: 'test_track.plan.test_plan_load_case_count'}
+    {id: 'testPlanLoadCaseCount', key: 'j', label: 'test_track.plan.test_plan_load_case_count'},
+    {id: 'principalName', key: 'k', label: 'test_track.plan.plan_principal'},
   ],
   //测试计划-功能用例
   TEST_PLAN_FUNCTION_TEST_CASE: [
@@ -194,7 +211,6 @@ export let CUSTOM_TABLE_HEADER = {
     {id: 'tags', key: '4', label: 'commons.tag'},
     {id: 'versionId', key: 'b', label: 'project.version.name', xpack: true},
     {id: 'nodePath', key: '5', label: 'test_track.case.module'},
-    {id: 'projectName', key: 'a', label: 'test_track.review.review_project'},
     {id: 'updateTime', key: '6', label: 'commons.update_time'},
     {id: 'createName', key: '7', label: 'commons.create_user'},
     {id: 'createTime', key: '8', label: 'commons.create_time'},
@@ -233,6 +249,18 @@ export let CUSTOM_TABLE_HEADER = {
     {id: 'description', key: '7', label: 'test_track.issue.description'},
     {id: 'caseCount', key: '9', label: 'api_test.definition.api_case_number'},
     {id: 'createTime', key: '8', label: 'commons.create_time'},
+  ],
+
+  //缺陷列表
+  ELEMENT_LIST: [
+    {id: 'num', key: '1', label: 'test_track.issue.id'},
+    {id: 'name', key: '2', label: '元素名称'},
+    {id: 'modulePath', key: '3', label: '所属页面'},
+    {id: 'locationType', key: '4', label: '定位类型'},
+    {id: 'location', key: '5', label: '元素定位'},
+    {id: 'creatorUser', key: '6', label: 'test_track.issue.issue_resource'},
+    {id: 'createTime', key: '7', label: 'commons.create_time'},
+    {id: 'updateTime', key: '8', label: 'commons.update_time'},
   ]
 
 }

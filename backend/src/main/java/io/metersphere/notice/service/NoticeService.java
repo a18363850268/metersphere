@@ -4,7 +4,6 @@ import com.alibaba.fastjson.JSON;
 import io.metersphere.base.domain.MessageTask;
 import io.metersphere.base.domain.MessageTaskExample;
 import io.metersphere.base.mapper.MessageTaskMapper;
-import io.metersphere.base.mapper.ProjectMapper;
 import io.metersphere.commons.exception.MSException;
 import io.metersphere.commons.utils.LogUtil;
 import io.metersphere.commons.utils.SessionUtils;
@@ -29,8 +28,6 @@ import java.util.stream.Collectors;
 public class NoticeService {
     @Resource
     private MessageTaskMapper messageTaskMapper;
-    @Resource
-    private ProjectMapper projectMapper;
 
     public void saveMessageTask(MessageDetail messageDetail) {
         MessageTaskExample example = new MessageTaskExample();
@@ -109,17 +106,6 @@ public class NoticeService {
         scheduleMessageTask.sort(Comparator.comparing(MessageDetail::getCreateTime, Comparator.nullsLast(Long::compareTo)).reversed());
         return scheduleMessageTask;
     }
-
-    public List<MessageDetail> searchMessageByType(String type) {
-        try {
-            String projectId = SessionUtils.getCurrentProjectId();
-            return getMessageDetails(type, projectId);
-        } catch (Exception e) {
-            LogUtil.error(e.getMessage(), e);
-            return new ArrayList<>();
-        }
-    }
-
 
     public List<MessageDetail> searchMessageByTypeAndProjectId(String type, String projectId) {
         try {

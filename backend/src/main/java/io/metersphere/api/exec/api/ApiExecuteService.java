@@ -165,22 +165,26 @@ public class ApiExecuteService {
         //检查TCP数据结构，等其他进行处理
         tcpApiParamService.checkTestElement(request.getTestElement());
 
-        HashTree hashTree = request.getTestElement().generateHashTree(config);
-        if (LoggerUtil.getLogger().isDebugEnabled()) {
-            LoggerUtil.debug("生成执行JMX内容【 " + request.getTestElement().getJmx(hashTree) + " 】");
-        }
+        String testId = request.getTestElement() != null &&
+                CollectionUtils.isNotEmpty(request.getTestElement().getHashTree()) &&
+                CollectionUtils.isNotEmpty(request.getTestElement().getHashTree().get(0).getHashTree()) ?
+                request.getTestElement().getHashTree().get(0).getHashTree().get(0).getName() : request.getId();
 
         String runMode = ApiRunMode.DEFINITION.name();
         if (StringUtils.isNotBlank(request.getType()) && StringUtils.equals(request.getType(), ApiRunMode.API_PLAN.name())) {
             runMode = ApiRunMode.API_PLAN.name();
         }
 
-        String testId = request.getTestElement() != null &&
-                CollectionUtils.isNotEmpty(request.getTestElement().getHashTree()) &&
-                CollectionUtils.isNotEmpty(request.getTestElement().getHashTree().get(0).getHashTree()) ?
-                request.getTestElement().getHashTree().get(0).getHashTree().get(0).getName() : request.getId();
+        HashTree hashTree = request.getTestElement().generateHashTree(config);
+        if (LoggerUtil.getLogger().isDebugEnabled()) {
+            LoggerUtil.debug("生成执行JMX内容【 " + request.getTestElement().getJmx(hashTree) + " 】");
+        }
+
         JmeterRunRequestDTO runRequest = new JmeterRunRequestDTO(testId, request.getId(), runMode, hashTree);
         runRequest.setDebug(request.isDebug());
+        runRequest.setExtendedParameters(new HashMap<String, Object>() {{
+            this.put("SYN_RES", request.isSyncResult());
+        }});
         // 开始执行
         jMeterService.run(runRequest);
         return new MsExecResponseDTO(runRequest.getTestId(), runRequest.getReportId(), runMode);

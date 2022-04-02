@@ -14,9 +14,7 @@ import io.metersphere.base.mapper.*;
 import io.metersphere.base.mapper.ext.ExtApiScenarioReportMapper;
 import io.metersphere.commons.constants.*;
 import io.metersphere.commons.exception.MSException;
-import io.metersphere.commons.utils.DateUtils;
-import io.metersphere.commons.utils.ServiceUtils;
-import io.metersphere.commons.utils.SessionUtils;
+import io.metersphere.commons.utils.*;
 import io.metersphere.constants.RunModeConstants;
 import io.metersphere.dto.*;
 import io.metersphere.i18n.Translator;
@@ -26,6 +24,7 @@ import io.metersphere.log.vo.OperatingLogDetails;
 import io.metersphere.log.vo.api.ModuleReference;
 import io.metersphere.notice.sender.NoticeModel;
 import io.metersphere.notice.service.NoticeSendService;
+import io.metersphere.service.SystemParameterService;
 import io.metersphere.service.UserService;
 import io.metersphere.track.dto.PlanReportCaseDTO;
 import io.metersphere.utils.LoggerUtil;
@@ -61,6 +60,8 @@ public class ApiScenarioReportService {
     @Resource
     private ApiScenarioMapper apiScenarioMapper;
     @Resource
+    private UiScenarioMapper uiScenarioMapper;
+    @Resource
     private TestPlanApiScenarioMapper testPlanApiScenarioMapper;
     @Resource
     private NoticeSendService noticeSendService;
@@ -84,8 +85,14 @@ public class ApiScenarioReportService {
         apiScenarioReportResultService.save(dto.getReportId(), requestResults);
     }
 
+
     public void batchSaveResult(List<ResultDTO> dtos) {
         apiScenarioReportResultService.batchSave(dtos);
+    }
+
+    public void saveUiResult(List<RequestResult> requestResults, ResultDTO dto) {
+        // 报告详情内容
+        apiScenarioReportResultService.uiSave(dto.getReportId(), requestResults);
     }
 
     public ApiScenarioReport testEnded(ResultDTO dto) {
@@ -110,6 +117,8 @@ public class ApiScenarioReportService {
             scenarioReport = updatePlanCase(requestResults, dto);
         } else if (StringUtils.equalsAny(dto.getRunMode(), ApiRunMode.SCHEDULE_SCENARIO_PLAN.name(), ApiRunMode.JENKINS_SCENARIO_PLAN.name())) {
             scenarioReport = updateSchedulePlanCase(requestResults, dto);
+        } else if (dto.getRunMode().startsWith("UI")) {
+            scenarioReport = updateUiScenario(requestResults, dto);
         } else {
             scenarioReport = updateScenario(requestResults, dto);
         }
@@ -118,6 +127,16 @@ public class ApiScenarioReportService {
     }
 
     public APIScenarioReportResult get(String reportId) {
+        ApiDefinitionExecResult result = definitionExecResultMapper.selectByPrimaryKey(reportId);
+        if (result != null) {
+            APIScenarioReportResult reportResult = new APIScenarioReportResult();
+            BeanUtils.copyBean(reportResult, result);
+            reportResult.setReportVersion(2);
+            reportResult.setTestId(reportId);
+            ApiScenarioReportDTO dto = apiScenarioReportStructureService.apiIntegratedReport(reportId);
+            reportResult.setContent(JSON.toJSONString(dto));
+            return reportResult;
+        }
         APIScenarioReportResult reportResult = extApiScenarioReportMapper.get(reportId);
         if (reportResult != null) {
             if (reportResult.getReportVersion() != null && reportResult.getReportVersion() > 1) {
@@ -323,27 +342,29 @@ public class ApiScenarioReportService {
     }
 
     public void margeReport(String reportId, String runMode) {
-        ApiScenarioReport report = apiScenarioReportMapper.selectByPrimaryKey(reportId);
-        if (report != null) {
-            // 更新场景状态
-            if (StringUtils.equalsIgnoreCase(runMode, ApiRunMode.DEFINITION.name())) {
-                ApiDefinitionExecResultExample execResultExample = new ApiDefinitionExecResultExample();
-                execResultExample.createCriteria().andIntegratedReportIdEqualTo(reportId).andStatusEqualTo("Error");
-                long size = definitionExecResultMapper.countByExample(execResultExample);
-                report.setStatus(size > 0 ? ScenarioStatus.Error.name() : ScenarioStatus.Success.name());
-            } else {
+        // 更新场景状态
+        if (StringUtils.equalsIgnoreCase(runMode, ApiRunMode.DEFINITION.name())) {
+            ApiDefinitionExecResult result = definitionExecResultMapper.selectByPrimaryKey(reportId);
+            ApiDefinitionExecResultExample execResultExample = new ApiDefinitionExecResultExample();
+            execResultExample.createCriteria().andIntegratedReportIdEqualTo(reportId).andStatusEqualTo("Error");
+            long size = definitionExecResultMapper.countByExample(execResultExample);
+            result.setStatus(size > 0 ? ScenarioStatus.Error.name() : ScenarioStatus.Success.name());
+            result.setEndTime(System.currentTimeMillis());
+            definitionExecResultMapper.updateByPrimaryKeySelective(result);
+        } else {
+            ApiScenarioReport report = apiScenarioReportMapper.selectByPrimaryKey(reportId);
+            if (report != null) {
                 ApiScenarioReportResultExample example = new ApiScenarioReportResultExample();
                 example.createCriteria().andReportIdEqualTo(reportId).andStatusEqualTo(ScenarioStatus.Error.name());
                 long size = apiScenarioReportResultMapper.countByExample(example);
                 report.setStatus(size > 0 ? ScenarioStatus.Error.name() : ScenarioStatus.Success.name());
+                report.setEndTime(System.currentTimeMillis());
+                // 更新报告
+                apiScenarioReportMapper.updateByPrimaryKey(report);
             }
-            // 更新控制台信息
-            apiScenarioReportStructureService.update(reportId, FixedCapacityUtils.getJmeterLogger(reportId));
-
-            report.setEndTime(System.currentTimeMillis());
-            // 更新报告
-            apiScenarioReportMapper.updateByPrimaryKey(report);
         }
+        // 更新控制台信息
+        apiScenarioReportStructureService.update(reportId, FixedCapacityUtils.getJmeterLogger(reportId));
     }
 
     public ApiScenarioReport updateScenario(List<ApiScenarioReportResult> requestResults, ResultDTO dto) {
@@ -365,7 +386,12 @@ public class ApiScenarioReportService {
             }
 
             long successSize = requestResults.stream().filter(requestResult -> StringUtils.equalsIgnoreCase(requestResult.getStatus(), ScenarioStatus.Success.name())).count();
-            scenario.setPassRate(new DecimalFormat("0%").format((float) successSize / requestResults.size()));
+            if (requestResults.size() == 0) {
+                scenario.setPassRate("0%");
+            } else {
+                scenario.setPassRate(new DecimalFormat("0%").format((float) successSize / requestResults.size()));
+            }
+
             scenario.setReportId(dto.getReportId());
             int executeTimes = 0;
             if (scenario.getExecuteTimes() != null) {
@@ -379,6 +405,42 @@ public class ApiScenarioReportService {
         if (scenario != null && report != null) {
             sendNotice(scenario, report);
         }
+        return report;
+    }
+
+    public ApiScenarioReport updateUiScenario(List<ApiScenarioReportResult> requestResults, ResultDTO dto) {
+        long errorSize = requestResults.stream().filter(requestResult -> StringUtils.equalsIgnoreCase(requestResult.getStatus(), ScenarioStatus.Error.name())).count();
+        // 更新报告状态
+        String status = getStatus(requestResults, dto);
+
+        ApiScenarioReport report = editReport(dto.getReportType(), dto.getReportId(), status, dto.getRunMode());
+        // 更新场景状态
+        UiScenarioWithBLOBs scenario = uiScenarioMapper.selectByPrimaryKey(dto.getTestId());
+        if (scenario == null) {
+            scenario = uiScenarioMapper.selectByPrimaryKey(report.getScenarioId());
+        }
+        if (scenario != null) {
+            if (StringUtils.equalsAnyIgnoreCase(status, ExecuteResult.errorReportResult.name())) {
+                scenario.setLastResult(status);
+            } else {
+                scenario.setLastResult(errorSize > 0 ? "Fail" : ScenarioStatus.Success.name());
+            }
+
+            long successSize = requestResults.stream().filter(requestResult -> StringUtils.equalsIgnoreCase(requestResult.getStatus(), ScenarioStatus.Success.name())).count();
+            scenario.setPassRate(new DecimalFormat("0%").format((float) successSize / requestResults.size()));
+            scenario.setReportId(dto.getReportId());
+            int executeTimes = 0;
+            if (scenario.getExecuteTimes() != null) {
+                executeTimes = scenario.getExecuteTimes().intValue();
+            }
+            scenario.setExecuteTimes(executeTimes + 1);
+            uiScenarioMapper.updateByPrimaryKey(scenario);
+        }
+
+//        // 发送通知
+//        if (scenario != null && report != null) {
+//            sendNotice(scenario, report);
+//        }
         return report;
     }
 
@@ -424,12 +486,15 @@ public class ApiScenarioReportService {
         }
         String userId = result.getCreateUser();
         UserDTO userDTO = userService.getUserDTO(userId);
-
+        SystemParameterService systemParameterService = CommonBeanFactory.getBean(SystemParameterService.class);
+        assert systemParameterService != null;
         Map paramMap = new HashMap<>(beanMap);
         paramMap.put("operator", userDTO.getName());
         paramMap.put("status", scenario.getLastResult());
         paramMap.put("environment", getEnvironment(scenario));
-
+        BaseSystemConfigDTO baseSystemConfigDTO = systemParameterService.getBaseInfo();
+        String reportUrl = baseSystemConfigDTO.getUrl() + "/#/api/automation/report/view/" + result.getId();
+        paramMap.put("reportUrl", reportUrl);
         String context = "${operator}执行接口自动化" + status + ": ${name}";
         NoticeModel noticeModel = NoticeModel.builder()
                 .operator(userId)

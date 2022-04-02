@@ -195,7 +195,7 @@ export default {
     },
     getName(jsonString) {
       let returnString = "无";
-      if (jsonString == '无' || jsonString == null) {
+      if (jsonString === '无' || jsonString === null) {
         return returnString;
       }
 

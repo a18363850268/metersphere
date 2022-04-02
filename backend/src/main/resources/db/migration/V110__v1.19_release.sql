@@ -1,6 +1,3 @@
--- module management
-INSERT INTO system_parameter (param_key, param_value, type, sort)
-VALUES ('metersphere.module.workstation', 'ENABLE', 'text', 1);
 
 DROP PROCEDURE IF EXISTS project_api_appl;
 DELIMITER //
@@ -24,6 +21,7 @@ BEGIN
     #遍历游标
     REPEAT
         #利用取到的值进行数据库的操作
+        DELETE FROM project_application WHERE project_id = projectId AND type = 'API_SHARE_REPORT_TIME';
         INSERT INTO project_application (project_id, type, type_value)
         VALUES (projectId, 'API_SHARE_REPORT_TIME', '24H');
         # 将游标中的值再赋值给变量，供下次循环使用
@@ -470,7 +468,8 @@ BEGIN
              test_case_template
         WHERE custom_field.id LIKE CONCAT(fieldId, '%')
           AND test_case_template.id LIKE CONCAT(templateId, '%')
-          AND (custom_field.project_id = test_case_template.project_id OR custom_field.project_id = 'global');
+          AND (custom_field.project_id = test_case_template.project_id OR custom_field.project_id = 'global' OR
+               test_case_template.project_id = 'global');
 
         INSERT INTO custom_field_template(id, field_id, template_id, scene, required, `order`, default_value,
                                           custom_data, `key`)
@@ -487,7 +486,8 @@ BEGIN
              issue_template
         WHERE custom_field.id LIKE CONCAT(fieldId, '%')
           AND issue_template.id LIKE CONCAT(templateId, '%')
-          AND (custom_field.project_id = issue_template.project_id OR custom_field.project_id = 'global');
+          AND (custom_field.project_id = issue_template.project_id OR custom_field.project_id = 'global' OR
+               issue_template.project_id = 'global');
 
     END LOOP;
     CLOSE cursor1;
@@ -522,6 +522,15 @@ UPDATE project
 SET project.issue_template_id = issue_template.id
 WHERE issue_template_id IS NOT NULL
   AND issue_template.id LIKE CONCAT(issue_template_id, '%');
+
+
+UPDATE project JOIN test_case_template ON project.id = test_case_template.project_id
+SET case_template_id = test_case_template.id
+WHERE case_template_id IS NULL AND test_case_template.`system` = 1;
+
+UPDATE project JOIN issue_template ON project.id = issue_template.project_id
+SET issue_template_id = issue_template.id
+WHERE issue_template_id IS NULL AND issue_template.`system` = 1;
 
 -- 默认设置权限
 INSERT INTO user_group_permission (id, group_id, permission_id, module_id)
@@ -640,3 +649,56 @@ alter table project drop column clean_load_report;
 alter table project drop column clean_load_report_expr;
 
 
+
+alter table api_test_environment
+    add create_time bigint(13) null;
+
+alter table api_test_environment
+    add update_time bigint(13) null;
+
+update api_test_environment set create_time = unix_timestamp() * 1000 where create_time is null;
+update api_test_environment set update_time = unix_timestamp() * 1000 where update_time is null;
+
+-- 删除历史脏数据
+delete
+from user_group_permission
+where group_id = 'admin'
+  and module_id = 'PROJECT_ERROR_REPORT_LIBRARY';
+
+ALTER TABLE api_definition_exec_result
+    ADD report_type varchar(100) DEFAULT 'API_INDEPENDENT' NOT NULL COMMENT '报告类型';
+
+insert into api_definition_exec_result(id, name, resource_id, create_time, status, user_id, trigger_mode, start_time,
+                                       end_time, actuator, report_type, version_id, project_id)
+select id,
+       name,
+       id,
+       create_time,
+       status,
+       user_id,
+       trigger_mode,
+       create_time,
+       IF(end_time is null, update_time, end_time),
+       actuator,
+       report_type,
+       version_id,
+       project_id
+from api_scenario_report
+where execute_type = 'Saved'
+  and report_type = 'API_INTEGRATED'
+  and end_time is not null;
+
+
+delete
+from api_scenario_report
+where report_type = 'API_INTEGRATED';
+
+ALTER TABLE api_definition MODIFY COLUMN path varchar (1000);
+
+#
+DELETE FROM user_group_permission
+WHERE group_id = 'project_app_manager';
+
+
+ALTER TABLE `test_plan_report_content` ADD COLUMN `un_execute_cases` LONGTEXT COMMENT '未执行状态接口用例';
+ALTER TABLE `test_plan_report_content` ADD COLUMN `un_execute_scenarios` LONGTEXT COMMENT '未执行状态场景用例';

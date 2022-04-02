@@ -19,10 +19,7 @@ import io.metersphere.base.mapper.*;
 import io.metersphere.base.mapper.ext.ExtIssuesMapper;
 import io.metersphere.base.mapper.ext.ExtProjectVersionMapper;
 import io.metersphere.base.mapper.ext.ExtTestCaseMapper;
-import io.metersphere.commons.constants.IssueRefType;
-import io.metersphere.commons.constants.ProjectApplicationType;
-import io.metersphere.commons.constants.TestCaseConstants;
-import io.metersphere.commons.constants.TestCaseReviewStatus;
+import io.metersphere.commons.constants.*;
 import io.metersphere.commons.exception.MSException;
 import io.metersphere.commons.user.SessionUser;
 import io.metersphere.commons.utils.*;
@@ -48,6 +45,8 @@ import io.metersphere.performance.service.PerformanceTestService;
 import io.metersphere.service.*;
 import io.metersphere.track.dto.TestCaseCommentDTO;
 import io.metersphere.track.dto.TestCaseDTO;
+import io.metersphere.track.issue.AbstractIssuePlatform;
+import io.metersphere.track.issue.IssueFactory;
 import io.metersphere.track.request.testcase.*;
 import io.metersphere.track.request.testplan.LoadCaseRequest;
 import io.metersphere.xmind.XmindCaseParser;
@@ -71,6 +70,7 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.BufferedInputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.lang.reflect.Method;
 import java.net.URLEncoder;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -206,9 +206,40 @@ public class TestCaseService {
         }
         //完全新增一条记录直接就是最新
         request.setLatest(true);
+
+        // 同步用例与需求的关联关系
+        addDemandHyperLink(request, "add");
+
         testCaseMapper.insert(request);
         saveFollows(request.getId(), request.getFollows());
         return request;
+    }
+
+    private void addDemandHyperLink(EditTestCaseRequest request, String type) {
+        if (StringUtils.isNotEmpty(request.getDemandId())) {
+            IssuesRequest updateRequest = new IssuesRequest();
+            updateRequest.setId(request.getId());
+            updateRequest.setResourceId(request.getDemandId());
+            updateRequest.setProjectId(request.getProjectId());
+            updateRequest.setTestCaseId(request.getId());
+            Project project = projectService.getProjectById(request.getProjectId());
+            updateRequest.setWorkspaceId(project.getWorkspaceId());
+            List<AbstractIssuePlatform> platformList = getAddPlatforms(updateRequest);
+            platformList.forEach(platform -> {
+                platform.updateDemandHyperLink(request, project, type);
+            });
+        }
+    }
+
+    private List<AbstractIssuePlatform> getAddPlatforms(IssuesRequest request) {
+        List<String> platforms = new ArrayList<>();
+        // 缺陷管理关联
+        platforms.add(issuesService.getPlatform(request.getProjectId()));
+
+        if (CollectionUtils.isEmpty(platforms)) {
+            platforms.add(IssuesManagePlatform.Local.toString());
+        }
+        return IssueFactory.createPlatforms(platforms, request);
     }
 
     private void dealWithCopyOtherInfo(TestCaseWithBLOBs testCase, String oldTestCaseId) {
@@ -288,6 +319,16 @@ public class TestCaseService {
         if (StringUtils.isNotBlank(testCase.getVersionId())) {
             example.getOredCriteria().get(0).andVersionIdEqualTo(testCase.getVersionId());
         }
+
+        // 同步缺陷与需求的关联关系
+        updateThirdPartyIssuesLink(testCase);
+
+        // 同步用例与需求的关联关系
+        addDemandHyperLink(testCase, "edit");
+
+        if (StringUtils.isEmpty(testCase.getDemandId())) {
+            testCase.setDemandId("");
+        }
         createNewVersionOrNot(testCase, example);
 
         if (StringUtils.isNotBlank(testCase.getCustomNum()) && StringUtils.isNotBlank(testCase.getId())) {
@@ -302,8 +343,25 @@ public class TestCaseService {
         }
 
         testCase.setLatest(null);
+
         testCaseMapper.updateByPrimaryKeySelective(testCase);
         return testCaseMapper.selectByPrimaryKey(testCase.getId());
+    }
+
+    /**
+     * 判断azure devops用例关联的需求是否发生变更，若发生变更，则重新建立需求与缺陷的关联关系
+     * @param testCase
+     */
+    private void updateThirdPartyIssuesLink(EditTestCaseRequest testCase) {
+        try {
+            if (Class.forName("io.metersphere.xpack.issue.service.XpackIssueService") != null) {
+                Class clazz = Class.forName("io.metersphere.xpack.issue.service.XpackIssueService");
+                Method method = clazz.getMethod("updateThirdPartyIssuesLink", EditTestCaseRequest.class);
+                method.invoke(CommonBeanFactory.getBean("xpackIssueService"), testCase);
+            }
+        } catch (Exception exception) {
+            LogUtil.error("不存在XpackIssueService类");
+        }
     }
 
     /**
@@ -424,8 +482,10 @@ public class TestCaseService {
             criteria.andNameEqualTo(testCase.getName())
                     .andProjectIdEqualTo(testCase.getProjectId())
                     .andNodePathEqualTo(nodePath)
-                    .andTypeEqualTo(testCase.getType())
-                    .andPriorityEqualTo(testCase.getPriority());
+                    .andTypeEqualTo(testCase.getType());
+            if (StringUtils.isNotBlank(testCase.getPriority())) {
+                criteria.andPriorityEqualTo(testCase.getPriority());
+            }
 
             if (StringUtils.isNotBlank(testCase.getTestId())) {
                 criteria.andTestIdEqualTo(testCase.getTestId());
@@ -1916,18 +1976,12 @@ public class TestCaseService {
         if (CollectionUtils.isNotEmpty(caseIds)) {
             List<IssuesDao> issues = extIssuesMapper.getIssueForMinder(caseIds, refType);
             for (IssuesDao item : issues) {
-                String key;
-                if (item.getRefType().equals(IssueRefType.PLAN_FUNCTIONAL.name())) {
-                    key = item.getRefId();
-                } else {
-                    key = item.getResourceId();
-                }
-                List<IssuesDao> list = issueMap.get(key);
+                List<IssuesDao> list = issueMap.get(item.getResourceId());
                 if (list == null) {
                     list = new ArrayList<>();
                 }
                 list.add(item);
-                issueMap.put(key, list);
+                issueMap.put(item.getResourceId(), list);
             }
         }
         return issueMap;

@@ -17,7 +17,6 @@
           :page-size="pageSize"
           :total="total"
           :operators="operators"
-          :screenHeight="screenHeight"
           :field-key="tableHeaderKey"
           :remember-order="true"
           :enable-order-drag="enableOrderDrag"
@@ -25,7 +24,7 @@
           :row-order-group-id="projectId"
           :row-order-func="editLoadTestCaseOrder"
           :batch-operators="batchButtons"
-          operator-width="190px"
+          operator-width="120px"
           :screen-height="screenHeight"
           @refresh="search"
           :disable-header-config="true"
@@ -33,18 +32,9 @@
           <el-table-column
             prop="num"
             label="ID"
-            width="100"
-            show-overflow-tooltip>
-          </el-table-column>
-          <el-table-column
-            v-if="versionEnable"
-            :label="$t('project.version.name')"
-            :filters="versionFilters"
-            column-key="versionId"
-            min-width="100px"
-            prop="versionId">
+            width="100">
             <template v-slot:default="scope">
-              <span>{{ scope.row.versionName }}</span>
+              <span @click="link(scope.row)" style="cursor: pointer;">{{ scope.row.num }}</span>
             </template>
           </el-table-column>
           <el-table-column
@@ -56,6 +46,16 @@
             </template>
           </el-table-column>
           <el-table-column
+            v-if="versionEnable"
+            :label="$t('project.version.name')"
+            :filters="versionFilters"
+            column-key="versionId"
+            prop="versionId">
+            <template v-slot:default="scope">
+              <span>{{ scope.row.versionName }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column
             prop="userName"
             sortable="custom"
             :filters="userFilters"
@@ -64,19 +64,19 @@
             show-overflow-tooltip>
           </el-table-column>
           <el-table-column
-            width="200"
             sortable
             prop="createTime"
-            :label="$t('commons.create_time')">
+            :label="$t('commons.create_time')"
+            show-overflow-tooltip>
             <template v-slot:default="scope">
               <span>{{ scope.row.createTime | timestampFormatDate }}</span>
             </template>
           </el-table-column>
           <el-table-column
-            width="200"
             sortable
             prop="updateTime"
-            :label="$t('commons.update_time')">
+            :label="$t('commons.update_time')"
+            show-overflow-tooltip>
             <template v-slot:default="scope">
               <span>{{ scope.row.updateTime | timestampFormatDate }}</span>
             </template>
@@ -165,6 +165,7 @@ export default {
       operators: [
         {
           tip: this.$t('commons.run'), icon: "el-icon-video-play",
+          class: 'run-button',
           exec: this.handleRun,
           permissions: ['PROJECT_PERFORMANCE_TEST:READ+RUN']
         },
@@ -174,7 +175,7 @@ export default {
           permissions: ['PROJECT_PERFORMANCE_TEST:READ+EDIT']
         },
         {
-          tip: this.$t('commons.copy'), icon: "el-icon-copy-document", type: "success",
+          tip: this.$t('commons.copy'), icon: "el-icon-copy-document", type: "primary",
           exec: this.handleCopy,
           permissions: ['PROJECT_PERFORMANCE_TEST:READ+COPY']
         }, {

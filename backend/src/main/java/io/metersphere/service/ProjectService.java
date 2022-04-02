@@ -16,10 +16,7 @@ import io.metersphere.base.mapper.ext.ExtUserGroupMapper;
 import io.metersphere.base.mapper.ext.ExtUserMapper;
 import io.metersphere.commons.constants.*;
 import io.metersphere.commons.exception.MSException;
-import io.metersphere.commons.utils.CommonBeanFactory;
-import io.metersphere.commons.utils.LogUtil;
-import io.metersphere.commons.utils.ServiceUtils;
-import io.metersphere.commons.utils.SessionUtils;
+import io.metersphere.commons.utils.*;
 import io.metersphere.controller.request.AddProjectRequest;
 import io.metersphere.controller.request.ProjectRequest;
 import io.metersphere.controller.request.ScheduleRequest;
@@ -36,6 +33,11 @@ import io.metersphere.performance.request.DeleteTestPlanRequest;
 import io.metersphere.performance.request.QueryProjectFileRequest;
 import io.metersphere.performance.service.PerformanceReportService;
 import io.metersphere.performance.service.PerformanceTestService;
+import io.metersphere.track.issue.AbstractIssuePlatform;
+import io.metersphere.track.issue.JiraPlatform;
+import io.metersphere.track.issue.TapdPlatform;
+import io.metersphere.track.issue.ZentaoPlatform;
+import io.metersphere.track.request.testcase.IssuesRequest;
 import io.metersphere.track.service.TestCaseService;
 import io.metersphere.track.service.TestPlanProjectService;
 import io.metersphere.track.service.TestPlanReportService;
@@ -175,17 +177,54 @@ public class ProjectService {
             projectVersion.setStatus("open");
             projectVersionService.addProjectVersion(projectVersion);
         }
+        initProjectApplication(project.getId());
+        return project;
+    }
 
+    private void initProjectApplication(String projectId) {
         //创建新项目也创建相关新项目的应用（分测试跟踪，接口，性能）
         ProjectApplication projectApplication = new ProjectApplication();
-        projectApplication.setProjectId(project.getId());
+        projectApplication.setProjectId(projectId);
         //每个新项目都会有测试跟踪/性能报告分享链接的有效时间,默认时间24H
         projectApplication.setType(ProjectApplicationType.TRACK_SHARE_REPORT_TIME.toString());
         projectApplication.setTypeValue("24H");
         projectApplicationMapper.insert(projectApplication);
         projectApplication.setType(ProjectApplicationType.PERFORMANCE_SHARE_REPORT_TIME.toString());
         projectApplicationMapper.insert(projectApplication);
-        return project;
+        projectApplication.setType(ProjectApplicationType.API_SHARE_REPORT_TIME.toString());
+        projectApplicationMapper.insert(projectApplication);
+        projectApplication.setType(ProjectApplicationType.CASE_CUSTOM_NUM.toString());
+        projectApplication.setTypeValue(Boolean.FALSE.toString());
+        projectApplicationMapper.insert(projectApplication);
+    }
+
+    public void checkThirdProjectExist(Project project) {
+        IssuesRequest issuesRequest = new IssuesRequest();
+        if (StringUtils.isBlank(project.getId())) {
+            MSException.throwException("project ID cannot be empty");
+        }
+        issuesRequest.setProjectId(project.getId());
+        issuesRequest.setWorkspaceId(project.getWorkspaceId());
+        if (StringUtils.equalsIgnoreCase(project.getPlatform(), IssuesManagePlatform.Tapd.name())) {
+            TapdPlatform tapd = new TapdPlatform(issuesRequest);
+            this.doCheckThirdProjectExist(tapd, project.getTapdId());
+        } else if (StringUtils.equalsIgnoreCase(project.getPlatform(), IssuesManagePlatform.Jira.name())) {
+            JiraPlatform jira = new JiraPlatform(issuesRequest);
+            this.doCheckThirdProjectExist(jira, project.getJiraKey());
+        } else if (StringUtils.equalsIgnoreCase(project.getPlatform(), IssuesManagePlatform.Zentao.name())) {
+            ZentaoPlatform zentao = new ZentaoPlatform(issuesRequest);
+            this.doCheckThirdProjectExist(zentao, project.getZentaoId());
+        }
+    }
+
+    private void doCheckThirdProjectExist(AbstractIssuePlatform platform, String relateId) {
+        if (StringUtils.isBlank(relateId)) {
+            MSException.throwException(Translator.get("issue_project_not_exist"));
+        }
+        Boolean exist = platform.checkProjectExist(relateId);
+        if (BooleanUtils.isFalse(exist)) {
+            MSException.throwException(Translator.get("issue_project_not_exist"));
+        }
     }
 
     private String genSystemId() {
@@ -276,13 +315,13 @@ public class ProjectService {
         userGroupMapper.deleteByExample(userGroupExample);
     }
 
-    public void updateIssueTemplate(String originId, String templateId, String workspaceId) {
+    public void updateIssueTemplate(String originId, String templateId, String projectId) {
         Project project = new Project();
         project.setIssueTemplateId(templateId);
         ProjectExample example = new ProjectExample();
         example.createCriteria()
                 .andIssueTemplateIdEqualTo(originId)
-                .andWorkspaceIdEqualTo(workspaceId);
+                .andIdEqualTo(projectId);
         projectMapper.updateByExampleSelective(project, example);
     }
 
@@ -292,15 +331,15 @@ public class ProjectService {
      *
      * @param originId
      * @param templateId
-     * @param workspaceId
+     * @param projectId
      */
-    public void updateCaseTemplate(String originId, String templateId, String workspaceId) {
+    public void updateCaseTemplate(String originId, String templateId, String projectId) {
         Project project = new Project();
         project.setCaseTemplateId(templateId);
         ProjectExample example = new ProjectExample();
         example.createCriteria()
                 .andCaseTemplateIdEqualTo(originId)
-                .andWorkspaceIdEqualTo(workspaceId);
+                .andIdEqualTo(projectId);
         projectMapper.updateByExampleSelective(project, example);
     }
 
@@ -526,8 +565,7 @@ public class ProjectService {
     }
 
 
-    public boolean isThirdPartTemplate(String projectId) {
-        Project project = getProjectById(projectId);
+    public boolean isThirdPartTemplate(Project project) {
         if (project.getThirdPartTemplate() != null && project.getThirdPartTemplate()
                 && project.getPlatform().equals(IssuesManagePlatform.Jira.name())) {
             return true;
@@ -728,7 +766,7 @@ public class ProjectService {
         } else {
             ProjectConfig config = projectApplicationService.getSpecificTypeValue(project.getId(), ProjectApplicationType.MOCK_TCP_PORT.name());
             Integer mockPort = config.getMockTcpPort();
-            if (mockPort == null || mockPort != 0) {
+            if (mockPort == null) {
                 MSException.throwException("Mock tcp port is not Found!");
             } else {
                 TCPPool.createTcp(mockPort);
@@ -752,7 +790,7 @@ public class ProjectService {
         } else {
             ProjectConfig config = projectApplicationService.getSpecificTypeValue(project.getId(), ProjectApplicationType.MOCK_TCP_PORT.name());
             Integer mockPort = config.getMockTcpPort();
-            if (mockPort == null || mockPort != 0) {
+            if (mockPort == null) {
                 MSException.throwException("Mock tcp port is not Found!");
             } else {
                 this.closeMockTcp(mockPort);
@@ -886,6 +924,7 @@ public class ProjectService {
         if (StringUtils.isBlank(projectId)) {
             return;
         }
+        LogUtil.info("clean up track plan report before: " + DateUtils.getTimeString(time) + ", resourceId : " + projectId);
         testPlanReportService.cleanUpReport(time, projectId);
     }
 
@@ -893,6 +932,7 @@ public class ProjectService {
         if (StringUtils.isBlank(projectId)) {
             return;
         }
+        LogUtil.info("clean up api report before: " + DateUtils.getTimeString(time) + ", resourceId : " + projectId);
         apiScenarioReportService.cleanUpReport(time, projectId);
     }
 
@@ -900,6 +940,7 @@ public class ProjectService {
         if (StringUtils.isBlank(projectId)) {
             return;
         }
+        LogUtil.info("clean up load report before: " + DateUtils.getTimeString(time) + ", resourceId : " + projectId);
         performanceReportService.cleanUpReport(time, projectId);
     }
 

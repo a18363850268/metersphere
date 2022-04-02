@@ -10,6 +10,7 @@ import io.metersphere.commons.constants.IssuesStatus;
 import io.metersphere.commons.exception.MSException;
 import io.metersphere.commons.utils.LogUtil;
 import io.metersphere.dto.UserDTO;
+import io.metersphere.i18n.Translator;
 import io.metersphere.track.dto.DemandDTO;
 import io.metersphere.track.issue.client.ZentaoClient;
 import io.metersphere.track.issue.domain.PlatformUser;
@@ -37,6 +38,11 @@ import java.util.regex.Pattern;
 
 public class ZentaoPlatform extends AbstractIssuePlatform {
     protected final ZentaoClient zentaoClient;
+
+    protected final String[] imgArray = {
+        "bmp", "jpg", "png", "tif", "gif", "jpeg"
+    };
+
 
     public ZentaoPlatform(IssuesRequest issuesRequest) {
         super(issuesRequest);
@@ -133,6 +139,12 @@ public class ZentaoPlatform extends AbstractIssuePlatform {
         return list;
     }
 
+    /**
+     * 更新缺陷数据
+     * @param issue 待更新缺陷数据
+     * @param bug 平台缺陷数据
+     * @return
+     */
     public IssuesWithBLOBs getUpdateIssues(IssuesWithBLOBs issue, JSONObject bug) {
         GetIssueResponse.Issue bugObj = JSONObject.parseObject(bug.toJSONString(), GetIssueResponse.Issue.class);
         String description = bugObj.getSteps();
@@ -154,11 +166,7 @@ public class ZentaoPlatform extends AbstractIssuePlatform {
             issuesMapper.updateByPrimaryKeySelective(issue);
         }
         issue.setTitle(bugObj.getTitle());
-
-        // 保留之前上传的图片
-        String images = getImages(issue.getDescription());
-        issue.setDescription(steps + "\n" + images);
-
+        issue.setDescription(steps);
         issue.setReporter(bugObj.getOpenedBy());
         issue.setPlatform(key);
         try {
@@ -338,9 +346,14 @@ public class ZentaoPlatform extends AbstractIssuePlatform {
     }
 
     public List<ZentaoBuild> getBuilds() {
-        Map<String, Object> builds = zentaoClient.getBuildsByCreateMetaData(getProjectId(projectId));
+        String relateProjectId = getProjectId(projectId);
+        Boolean exist = checkProjectExist(relateProjectId);
+        if (!exist) {
+            MSException.throwException(Translator.get("zentao_project_id_not_exist"));
+        }
+        Map<String, Object> builds = zentaoClient.getBuildsByCreateMetaData(relateProjectId);
         if (builds == null || builds.isEmpty()) {
-            builds = zentaoClient.getBuilds(getProjectId(projectId));
+            builds = zentaoClient.getBuilds(relateProjectId);
         }
         List<ZentaoBuild> res = new ArrayList<>();
         builds.forEach((k, v) -> {
@@ -405,8 +418,61 @@ public class ZentaoPlatform extends AbstractIssuePlatform {
     }
 
     private String zentao2MsDescription(String ztDescription) {
-        // todo 图片回显
-        String imgRegex = "<img src.*?/>";
-        return ztDescription.replaceAll(imgRegex, "");
+        String imgRegex ="<img src.*?/>";
+        Pattern pattern = Pattern.compile(imgRegex);
+        Matcher matcher = pattern.matcher(ztDescription);
+        while (matcher.find()) {
+            if (StringUtils.isNotEmpty(matcher.group())) {
+                // img标签内容
+                String imgPath = matcher.group();
+                // 解析标签内容为图片超链接格式，进行替换，
+                String src = getMatcherResultForImg("src\\s*=\\s*\"?(.*?)(\"|>|\\s+)", imgPath);
+                String alt = getMatcherResultForImg("alt\\s*=\\s*\"?(.*?)(\"|>|\\s+)", imgPath);
+                String hyperLinkPath = packageDescriptionByPathAndName(src, alt);
+                imgPath = imgPath.replace("{", "\\{").replace("}", "\\}");
+                ztDescription = ztDescription.replaceAll(imgPath, hyperLinkPath);
+            }
+        }
+
+        return ztDescription;
+    }
+
+    private String packageDescriptionByPathAndName(String path, String name) {
+        String result = "";
+
+        if (StringUtils.isNotEmpty(path)) {
+            if (path.startsWith("{") && path.endsWith("}")) {
+                String srcContent = path.substring(1, path.length() - 1);
+                if (StringUtils.isEmpty(name)) {
+                    name = srcContent;
+                }
+                if (Arrays.stream(imgArray).anyMatch(imgType -> StringUtils.equals(imgType, srcContent.substring(srcContent.indexOf('.') + 1)))) {
+                    path = zentaoClient.getBaseUrl() + "/file-read-" + srcContent;
+                } else {
+                    return result;
+                }
+            }
+            // 图片与描述信息之间需换行，否则无法预览图片
+            result = "\n\n![" + name + "](" + path + ")";
+        }
+
+        return result;
+    }
+
+    private String getMatcherResultForImg(String regex, String targetStr) {
+        String result = "";
+
+        Pattern pattern = Pattern.compile(regex);
+        Matcher matcher = pattern.matcher(targetStr);
+        while (matcher.find()) {
+            result = matcher.group(1);
+        }
+
+        return result;
+    }
+
+    @Override
+    public Boolean checkProjectExist(String relateId) {
+        return zentaoClient.checkProjectExist(relateId);
     }
 }

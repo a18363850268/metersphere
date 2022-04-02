@@ -1,6 +1,7 @@
 package io.metersphere.api.service;
 
 import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.JSONObject;
 import io.metersphere.api.dto.ErrorReportLibraryParseDTO;
 import io.metersphere.base.domain.ApiScenarioReportResult;
 import io.metersphere.base.mapper.ApiScenarioReportResultMapper;
@@ -46,28 +47,65 @@ public class ApiScenarioReportResultService {
 
     public void batchSave(List<ResultDTO> dtos) {
         if (CollectionUtils.isNotEmpty(dtos)) {
-            SqlSession sqlSession = sqlSessionFactory.openSession(ExecutorType.BATCH);
-            ApiScenarioReportResultMapper batchMapper = sqlSession.getMapper(ApiScenarioReportResultMapper.class);
-            for (ResultDTO dto : dtos) {
-                if (CollectionUtils.isNotEmpty(dto.getRequestResults())) {
-                    dto.getRequestResults().forEach(item -> {
-                        if (StringUtils.isEmpty(item.getName()) || !item.getName().startsWith("Transaction=") || !CollectionUtils.isEmpty(item.getSubRequestResults())) {
-                            batchMapper.insert(this.newApiScenarioReportResult(dto.getReportId(), item));
-                        }
-                    });
+            if (dtos.size() == 1 && CollectionUtils.isNotEmpty(dtos.get(0).getRequestResults()) && dtos.get(0).getRequestResults().size() == 1) {
+                // 单条储存
+                RequestResult requestResult = dtos.get(0).getRequestResults().get(0);
+                if (StringUtils.isEmpty(requestResult.getName()) || !requestResult.getName().startsWith("Transaction=") || !CollectionUtils.isEmpty(requestResult.getSubRequestResults())) {
+                    apiScenarioReportResultMapper.insert(this.newApiScenarioReportResult(dtos.get(0).getReportId(), requestResult));
                 }
-            }
-            sqlSession.flushStatements();
-            if (sqlSession != null && sqlSessionFactory != null) {
-                SqlSessionUtils.closeSqlSession(sqlSession, sqlSessionFactory);
+            } else {
+                SqlSession sqlSession = sqlSessionFactory.openSession(ExecutorType.BATCH);
+                ApiScenarioReportResultMapper batchMapper = sqlSession.getMapper(ApiScenarioReportResultMapper.class);
+                for (ResultDTO dto : dtos) {
+                    if (CollectionUtils.isNotEmpty(dto.getRequestResults())) {
+                        dto.getRequestResults().forEach(item -> {
+                            if (StringUtils.isEmpty(item.getName()) || !item.getName().startsWith("Transaction=") || !CollectionUtils.isEmpty(item.getSubRequestResults())) {
+                                batchMapper.insert(this.newApiScenarioReportResult(dto.getReportId(), item));
+                            }
+                        });
+                    }
+                }
+                sqlSession.flushStatements();
+                if (sqlSession != null && sqlSessionFactory != null) {
+                    SqlSessionUtils.closeSqlSession(sqlSession, sqlSessionFactory);
+                }
             }
         }
     }
 
-    private ApiScenarioReportResult newApiScenarioReportResult(String reportId, RequestResult result) {
+    public void uiSave(String reportId, List<RequestResult> queue) {
+        if (CollectionUtils.isNotEmpty(queue)) {
+            queue.forEach(item -> {
+                String header = item.getResponseResult().getHeaders();
+                if (StringUtils.isNoneBlank(header)) {
+                    JSONObject jsonObject = JSONObject.parseObject(header);
+                    for (String resourceId : jsonObject.keySet()) {
+                        apiScenarioReportResultMapper.insert(this.newUiScenarioReportResult(reportId, resourceId, jsonObject.getJSONObject(resourceId)));
+                    }
+                }
+            });
+        }
+    }
+
+    private ApiScenarioReportResult newUiScenarioReportResult(String reportId, String resourceId, JSONObject value) {
+        ApiScenarioReportResult report = new ApiScenarioReportResult();
+        report.setId(UUID.randomUUID().toString());
+        report.setResourceId(resourceId);
+        report.setReportId(reportId);
+        report.setTotalAssertions(0L);
+        report.setPassAssertions(0L);
+        report.setCreateTime(System.currentTimeMillis());
+        String status = value.getBooleanValue("success") ? ExecuteResult.Success.name() : ExecuteResult.Error.name();
+        report.setStatus(status);
+        report.setContent(value.toJSONString().getBytes(StandardCharsets.UTF_8));
+        return report;
+    }
+
+    private ApiScenarioReportResult newApiScenarioReportResult(String reportId, RequestResult baseResult) {
         ApiScenarioReportResult report = new ApiScenarioReportResult();
         //解析误报内容
-        ErrorReportLibraryParseDTO errorCodeDTO = ErrorReportLibraryUtil.parseAssertions(result);
+        ErrorReportLibraryParseDTO errorCodeDTO = ErrorReportLibraryUtil.parseAssertions(baseResult);
+        RequestResult result = errorCodeDTO.getResult();
         report.setId(UUID.randomUUID().toString());
         String resourceId = result.getResourceId();
         report.setResourceId(resourceId);

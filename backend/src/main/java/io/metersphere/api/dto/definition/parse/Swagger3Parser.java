@@ -458,13 +458,18 @@ public class Swagger3Parser extends SwaggerAbstractParser {
     private JsonSchemaItem parseSchema(Schema schema, Set<String> refSet) {
         if (schema == null) return null;
         JsonSchemaItem item = new JsonSchemaItem();
+        if(schema.getRequired()!=null){
+            item.setRequired(schema.getRequired());
+        }
         if (StringUtils.isNotBlank(schema.get$ref())) {
             if (refSet.contains(schema.get$ref())) return item;
             item.setType("object");
             refSet.add(schema.get$ref());
             Schema modelByRef = getModelByRef(schema.get$ref());
-            if (modelByRef != null)
+            if (modelByRef != null){
                 item.setProperties(parseSchemaProperties(modelByRef, refSet));
+                item.setRequired(modelByRef.getRequired());
+            }
         } else if (schema instanceof ArraySchema) {
             Schema items = ((ArraySchema) schema).getItems();
             item.setType("array");
@@ -715,6 +720,9 @@ public class Swagger3Parser extends SwaggerAbstractParser {
         String type = requestBody.getString("type");
 
         JSONObject parsedParam = new JSONObject();
+        if(required!=null){
+            parsedParam.put("required",required);
+        }
         if (StringUtils.isNotBlank(type)) {
             if (StringUtils.equals(type, "array")) {
                 JSONObject items = requestBody.getJSONObject("items");
@@ -727,18 +735,11 @@ public class Swagger3Parser extends SwaggerAbstractParser {
             } else if (StringUtils.equals(type, "object")) {
                 parsedParam.put("type", "object");
                 JSONObject properties = requestBody.getJSONObject("properties");
-                JSONObject swaggerProperties = new JSONObject();
-                properties.keySet().forEach((k) -> {
-                    JSONObject item = buildJsonSchema(properties.getJSONObject(k), required);
-                    if (required != null && required.contains(k)) {
-                        item.put("required", true);
-                    }
-                    swaggerProperties.put(k, item);
-                });
+
                 if (StringUtils.isNotBlank(requestBody.getString("description"))) {
                     parsedParam.put("description", requestBody.getString("description"));
                 }
-                parsedParam.put("properties", swaggerProperties);
+                parsedParam.put("properties", properties);
             } else if (StringUtils.equals(type, "integer")) {
                 parsedParam.put("type", "integer");
                 parsedParam.put("format", "int64");
@@ -747,7 +748,7 @@ public class Swagger3Parser extends SwaggerAbstractParser {
                 parsedParam.put("type", "boolean");
                 setCommonJsonSchemaParam(parsedParam, requestBody);
             } else if (StringUtils.equals(type, "number")) {  //  double 类型会被 fastJson 转换为 BigDecimal
-                parsedParam.put("type", "double");
+                parsedParam.put("type", "number");
                 setCommonJsonSchemaParam(parsedParam, requestBody);
             } else {
                 parsedParam.put("type", "string");
@@ -946,7 +947,9 @@ public class Swagger3Parser extends SwaggerAbstractParser {
             } else if (bodyType.equalsIgnoreCase("RAW")) {
                 bodyInfo = new JSONObject();
                 ((JSONObject) bodyInfo).put("type", "string");
-                ((JSONObject) bodyInfo).put("example", body.get("raw").toString());
+                if (body != null && body.get("raw") != null) {
+                    ((JSONObject) bodyInfo).put("example", body.get("raw").toString());
+                }
             } else if (bodyType.equalsIgnoreCase("XML")) {
                 String xmlText = body.getString("raw");
                 JSONObject xmlToJson = XMLUtils.XmlToJson(xmlText);

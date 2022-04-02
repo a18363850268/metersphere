@@ -456,7 +456,8 @@ public class PerformanceTestService {
             // 保存测试里的配置
             testReport.setTestResourcePoolId(loadTest.getTestResourcePoolId());
             testReport.setLoadConfiguration(loadTest.getLoadConfiguration());
-
+            // 启动插入 report
+            testReport.setAdvancedConfiguration(loadTest.getAdvancedConfiguration());
             String testPlanLoadId = request.getTestPlanLoadId();
             if (StringUtils.isNotBlank(testPlanLoadId)) {
                 // 设置本次报告中的压力配置信息
@@ -471,8 +472,6 @@ public class PerformanceTestService {
                     testReport.setTestResourcePoolId(testPlanLoadCase.getTestResourcePoolId());
                 }
             }
-            // 启动插入 report
-            testReport.setAdvancedConfiguration(loadTest.getAdvancedConfiguration());
             testReport.setStatus(PerformanceTestStatus.Starting.name());
             testReport.setProjectId(loadTest.getProjectId());
             testReport.setTestName(loadTest.getName());
@@ -770,6 +769,21 @@ public class PerformanceTestService {
         return null;
     }
 
+    public String deleteBatchLog(DeletePerformanceRequest request) {
+        ServiceUtils.getSelectAllIds(request, request.getCondition(),
+                (query) -> getLoadTestIds(request.getProjectId()));
+        List<String> loadTestIds = request.getIds();
+        LoadTestExample example = new LoadTestExample();
+        example.createCriteria().andIdIn(loadTestIds);
+        List<LoadTest> tests = loadTestMapper.selectByExample(example);
+        if (org.apache.commons.collections.CollectionUtils.isNotEmpty(tests)) {
+            List<String> names = tests.stream().map(LoadTest::getName).collect(Collectors.toList());
+            OperatingLogDetails details = new OperatingLogDetails(JSON.toJSONString(loadTestIds), tests.get(0).getProjectId(), String.join(",", names), tests.get(0).getCreateUser(), new LinkedList<>());
+            return JSON.toJSONString(details);
+        }
+        return null;
+    }
+
     /**
      * 一键更新由接口用例或者场景用例转换的性能测试
      *
@@ -1062,5 +1076,6 @@ public class PerformanceTestService {
         List<LoadTest> loadTests = this.getLoadTestByProjectId(projectId);
         return loadTests.stream().map(LoadTest::getId).collect(Collectors.toList());
     }
+
 
 }

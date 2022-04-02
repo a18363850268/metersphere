@@ -15,7 +15,7 @@
       :title="displayTitle"
       :if-from-variable-advance="ifFromVariableAdvance">
 
-      <template v-slot:afterTitle v-if="(request.refType==='API'|| request.refType==='CASE')&&isSameSpace">
+      <template v-slot:afterTitle v-if="(request.refType==='API'|| request.refType==='CASE')">
         <span v-if="isShowNum" @click="clickResource(request)">{{ "（ ID: " + request.num + "）" }}</span>
         <span v-else>
           <el-tooltip class="ms-num" effect="dark"
@@ -71,9 +71,8 @@
       </template>
       <!--请求内容-->
       <template v-slot:request>
-        <legend style="width: 100%">
+        <legend style="width: 100%;">
           <div v-if="!ifFromVariableAdvance">
-
             <customize-req-info :is-customize-req="isCustomizeReq" :request="request" @setDomain="setDomain"/>
             <p class="tip">{{ $t('api_test.definition.request.req_param') }} </p>
             <ms-api-request-form
@@ -90,24 +89,30 @@
               v-if="showXpackCompnent&&request.esbDataStruct!=null"
               v-xpack
               :request="request"
-              :showScript="false"
+              :response="response"
+              :showScript="true"
+              :show-pre-script="true"
               :is-read-only="isCompReadOnly" ref="esbDefinition"/>
             <ms-tcp-format-parameters
               v-if="(request.protocol==='TCP'|| request.type==='TCPSampler')&& request.esbDataStruct==null "
               :is-read-only="isCompReadOnly"
-              :show-script="false" :request="request"/>
+              :response="response"
+              :show-pre-script="true"
+              :show-script="true" :request="request"/>
 
             <ms-sql-basis-parameters
               v-if="request.protocol==='SQL'|| request.type==='JDBCSampler'"
               :request="request"
+              :response="response"
               :is-read-only="isCompReadOnly"
-              :showScript="false"/>
+              :showScript="true"/>
 
             <ms-dubbo-basis-parameters
               v-if="request.protocol==='DUBBO' || request.protocol==='dubbo://'|| request.type==='DubboSampler'"
               :request="request"
+              :response="response"
               :is-read-only="isCompReadOnly"
-              :showScript="false"/>
+              :showScript="true"/>
 
           </div>
         </legend>
@@ -156,18 +161,7 @@
 </template>
 
 <script>
-import MsSqlBasisParameters from "../../../definition/components/request/database/BasisParameters";
-import MsTcpFormatParameters from "../../../definition/components/request/tcp/TcpFormatParameters";
-import MsDubboBasisParameters from "../../../definition/components/request/dubbo/BasisParameters";
-import MsApiRequestForm from "../../../definition/components/request/http/ApiHttpRequestForm";
-import MsRequestResultTail from "../../../definition/components/response/RequestResultTail";
-import MsRun from "../../../definition/components/Run";
 import {getUUID, getCurrentProjectID, getCurrentWorkspaceId} from "@/common/js/utils";
-import ApiBaseComponent from "../common/ApiBaseComponent";
-import ApiResponseComponent from "./ApiResponseComponent";
-import CustomizeReqInfo from "@/business/components/api/automation/scenario/common/CustomizeReqInfo";
-import TemplateComponent from "@/business/components/track/plan/view/comonents/report/TemplateComponent/TemplateComponent";
-import {ENV_TYPE} from "@/common/js/constants";
 import {getUrl} from "@/business/components/api/automation/scenario/component/urlhelper";
 
 const requireComponent = require.context('@/business/components/xpack/', true, /\.vue$/);
@@ -198,7 +192,6 @@ export default {
     },
     currentEnvironmentId: String,
     projectList: Array,
-    expandedNode: Array,
     envMap: Map,
     message: String,
     environmentGroupId: String,
@@ -210,10 +203,16 @@ export default {
     },
   },
   components: {
-    TemplateComponent,
-    CustomizeReqInfo,
-    ApiBaseComponent, ApiResponseComponent,
-    MsSqlBasisParameters, MsTcpFormatParameters, MsDubboBasisParameters, MsApiRequestForm, MsRequestResultTail, MsRun,
+    TemplateComponent: () => import("@/business/components/track/plan/view/comonents/report/TemplateComponent/TemplateComponent"),
+    CustomizeReqInfo: () => import("@/business/components/api/automation/scenario/common/CustomizeReqInfo"),
+    ApiBaseComponent: () => import("../common/ApiBaseComponent"),
+    ApiResponseComponent: () => import("./ApiResponseComponent"),
+    MsSqlBasisParameters: () => import("../../../definition/components/request/database/BasisParameters"),
+    MsTcpFormatParameters: () => import("../../../definition/components/request/tcp/TcpFormatParameters"),
+    MsDubboBasisParameters: () => import("../../../definition/components/request/dubbo/BasisParameters"),
+    MsApiRequestForm: () => import("../../../definition/components/request/http/ApiHttpRequestForm"),
+    MsRequestResultTail: () => import("../../../definition/components/response/RequestResultTail"),
+    MsRun: () => import("../../../definition/components/Run"),
     "esbDefinition": esbDefinition.default,
     "esbDefinitionResponse": esbDefinitionResponse.default
   },
@@ -231,7 +230,6 @@ export default {
       envType: this.environmentType,
       environmentMap: this.envMap,
       isShowNum: false,
-      isSameSpace: true,
       response: {},
     }
   },
@@ -255,7 +253,6 @@ export default {
       if (this.request.id && this.request.referenced === 'REF') {
         this.request.disabled = true;
       }
-      this.getWorkspaceId(this.request.projectId);
     } else {
       this.isShowNum = false;
     }
@@ -273,31 +270,15 @@ export default {
     if (requireComponent != null && JSON.stringify(esbDefinition) != '{}' && JSON.stringify(esbDefinitionResponse) != '{}') {
       this.showXpackCompnent = true;
     }
-    this.getEnvironments(this.environmentGroupId);
   },
   watch: {
-    envMap(val) {
-      this.getEnvironments();
-      this.environmentMap = val;
-    },
     message() {
       this.forStatus();
       this.reload();
     },
-    environmentGroupId(val) {
-      this.getEnvironments(val);
-    },
-    environmentType(val) {
-      this.envType = val;
-    },
     '$store.state.currentApiCase.debugLoop'() {
       this.forStatus();
       this.reload();
-    },
-    '$store.state.currentApiCase.resetDataSource'() {
-      if (this.request.id && this.request.referenced !== 'REF') {
-        this.initDataSource();
-      }
     },
   },
   computed: {
@@ -394,50 +375,7 @@ export default {
         this.response = this.request.requestResult[0];
       }
     },
-    initDataSource() {
-      let databaseConfigsOptions = [];
-      if (this.request.protocol === 'SQL' || this.request.type === 'JDBCSampler') {
-        if (this.environment && this.environment.config) {
-          let config = JSON.parse(this.environment.config);
-          if (config && config.databaseConfigs) {
-            config.databaseConfigs.forEach(item => {
-              databaseConfigsOptions.push(item);
-            });
-          }
-        }
-      }
-      if (databaseConfigsOptions.length > 0 && this.request.environmentId !== this.environment.id) {
-        this.request.dataSourceId = databaseConfigsOptions[0].id;
-        this.request.environmentId = this.environment.id;
-      }
-    },
-    getEnvironments(groupId) {
-      this.environment = {};
-      let id = undefined;
-      if (groupId) {
-        this.$get("/environment/group/project/map/" + groupId, res => {
-          let data = res.data;
-          if (data) {
-            this.environmentMap = new Map(Object.entries(data));
-            id = new Map(Object.entries(data)).get(this.request.projectId);
-            if (id) {
-              this.$get('/api/environment/get/' + id, response => {
-                this.environment = response.data;
-                this.initDataSource();
-              });
-            }
-          }
-        })
-      } else {
-        id = this.envMap.get(this.request.projectId);
-        if (id) {
-          this.$get('/api/environment/get/' + id, response => {
-            this.environment = response.data;
-            this.initDataSource();
-          });
-        }
-      }
-    },
+
     remove() {
       this.$emit('remove', this.request, this.node);
     },
@@ -454,81 +392,6 @@ export default {
             this.request.path = url;
             this.request.url = undefined;
           }
-        }
-      }
-    },
-    getApiInfo() {
-      if (this.request.id && this.request.referenced === 'REF') {
-        let requestResult = this.request.requestResult;
-        let enable = this.request.enable;
-        this.$get("/api/testcase/get/" + this.request.id, response => {
-          if (response.data) {
-            let hashTree = [];
-            if (this.request.hashTree) {
-              hashTree = JSON.parse(JSON.stringify(this.request.hashTree));
-            }
-            Object.assign(this.request, JSON.parse(response.data.request));
-            this.request.name = response.data.name;
-            this.request.referenced = "REF";
-            this.request.enable = enable;
-            if (response.data.path && response.data.path != null) {
-              this.request.path = response.data.path;
-              this.request.url = response.data.url;
-            }
-            if (response.data.method && response.data.method != null) {
-              this.request.method = response.data.method;
-            }
-            if (requestResult && Object.prototype.toString.call(requestResult) !== '[object Array]') {
-              this.request.requestResult = [requestResult];
-            } else {
-              this.request.requestResult = requestResult;
-            }
-            if (response.data.num) {
-              this.request.num = response.data.num;
-              this.getWorkspaceId(response.data.projectId);
-            }
-            this.request.id = response.data.id;
-            this.request.disabled = true;
-            this.request.root = true;
-            this.request.projectId = response.data.projectId;
-            this.request.versionName = response.data.versionName;
-            this.request.versionEnable = response.data.versionEnable;
-            let req = JSON.parse(response.data.request);
-            if (req && this.request) {
-              this.request.hashTree = hashTree;
-              this.mergeHashTree(req.hashTree);
-            }
-            this.initDataSource();
-            this.forStatus();
-            this.sort();
-            this.reload();
-          }
-        })
-      } else if (this.request.id && this.request.referenced === 'Copy') {
-        if (this.request.refType === 'CASE') {
-          this.$get("/api/testcase/get/" + this.request.id, response => {
-            if (response.data) {
-              if (response.data.num) {
-                this.request.num = response.data.num;
-                this.getWorkspaceId(response.data.projectId);
-              }
-              this.request.id = response.data.id;
-              this.request.versionName = response.data.versionName;
-              this.request.versionEnable = response.data.versionEnable;
-            }
-          })
-        } else if (this.request.refType === 'API') {
-          this.$get("/api/definition/get/" + this.request.id, response => {
-            if (response.data) {
-              if (response.data.num) {
-                this.request.num = response.data.num;
-                this.getWorkspaceId(response.data.projectId);
-              }
-              this.request.id = response.data.id;
-              this.request.versionName = response.data.versionName;
-              this.request.versionEnable = response.data.versionEnable;
-            }
-          })
         }
       }
     },
@@ -613,13 +476,6 @@ export default {
       if (this.node) {
         this.node.expanded = this.request.active;
       }
-      if (this.node.expanded && this.expandedNode && this.expandedNode.indexOf(this.request.resourceId) === -1) {
-        this.expandedNode.push(this.request.resourceId);
-      } else {
-        if (this.expandedNode && this.expandedNode.indexOf(this.request.resourceId) !== -1) {
-          this.expandedNode.splice(this.expandedNode.indexOf(this.request.resourceId), 1);
-        }
-      }
       this.apiActive = this.request.active;
       this.reload();
     },
@@ -693,34 +549,20 @@ export default {
     },
 
     clickResource(resource) {
-      if (resource.refType && resource.refType === 'API') {
-        if (resource.protocol === 'dubbo://') {
-          resource.protocol = 'DUBBO'
-        }
-        let definitionData = this.$router.resolve({
-          name: 'ApiDefinition',
-          params: {
-            redirectID: getUUID(),
-            dataType: "api",
-            dataSelectRange: 'edit:' + resource.id,
-            projectId: resource.projectId,
-            type: resource.protocol
-          }
-        });
-        window.open(definitionData.href, '_blank');
-      } else if (resource.refType && resource.refType === 'CASE') {
-        this.$get("/api/testcase/findById/" + resource.id, response => {
+      let workspaceId = getCurrentWorkspaceId();
+      let isTurnSpace = true
+      if (resource.projectId !== getCurrentProjectID()) {
+        isTurnSpace = false;
+        this.$get("/project/get/" + resource.projectId, response => {
           if (response.data) {
-            response.data.sourceId = resource.resourceId;
-            response.data.type = resource.type;
-            response.data.refType = resource.refType;
-            this.clickCase(response.data)
-          } else {
-            this.$error("接口用例场景场景已经被删除");
+            workspaceId = response.data.workspaceId;
+            isTurnSpace = true;
+            this.checkPermission(resource, workspaceId, isTurnSpace);
           }
         });
+      } else {
+        this.checkPermission(resource, workspaceId, isTurnSpace);
       }
-
     },
     clickCase(resource) {
       let uri = getUrl(resource);
@@ -747,20 +589,55 @@ export default {
       let element = document.getElementById(id);
       element.parentNode.removeChild(element);
     },
-    getWorkspaceId(projectId) {
-      this.$get("/project/get/" + projectId, response => {
-        if (response.data) {
-          if (response.data.workspaceId === getCurrentWorkspaceId()) {
-            this.isShowNum = true;
-          } else {
-            this.isSameSpace = false;
-          }
-        }
-      });
-    },
     editScenarioAdvance(data) {
       this.$emit('editScenarioAdvance', data);
     },
+    gotoTurn(resource, workspaceId, isTurnSpace) {
+      if (resource.refType && resource.refType === 'API') {
+        if (resource.protocol === 'dubbo://') {
+          resource.protocol = 'DUBBO'
+        }
+        let definitionData = this.$router.resolve({
+          name: 'ApiDefinition',
+          params: {
+            redirectID: getUUID(),
+            dataType: "api",
+            dataSelectRange: 'edit:' + resource.id,
+            projectId: resource.projectId,
+            type: resource.protocol,
+            workspaceId: workspaceId,
+          }
+        });
+        if (isTurnSpace) {
+          window.open(definitionData.href, '_blank');
+        }
+      } else if (resource.refType && resource.refType === 'CASE') {
+        this.$get("/api/testcase/findById/" + resource.id, response => {
+          if (response.data) {
+            response.data.sourceId = resource.resourceId;
+            response.data.type = resource.type;
+            response.data.refType = resource.refType;
+            response.data.workspaceId = workspaceId;
+            if (isTurnSpace) {
+              this.clickCase(response.data)
+            }
+          } else {
+            this.$error("接口用例场景场景已经被删除");
+          }
+        });
+      }
+    },
+    checkPermission(resource, workspaceId, isTurnSpace){
+      this.$get('/project/getOwnerProjectIds', res => {
+        const project = res.data.find(p => p === resource.projectId);
+        if(!project){
+          this.$warning(this.$t('commons.no_permission'));
+        }else{
+          this.gotoTurn(resource, workspaceId, isTurnSpace)
+        }
+
+      })
+    }
   }
 }
 </script>

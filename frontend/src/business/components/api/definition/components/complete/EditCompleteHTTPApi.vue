@@ -151,10 +151,10 @@
           :rule="rule"
           :maintainer-options="maintainerOptions"
           :module-options="moduleOptions"
-          :request="request"
-          :old-request="oldRequest"
-          :response="response"
-          :old-response="oldResponse"
+          :request="newRequest"
+          :old-request="request"
+          :response="newResponse"
+          :old-response="response"
         ></http-api-version-diff>
       </el-dialog>
 
@@ -169,6 +169,8 @@
       <div>
         <el-checkbox v-model="httpForm.newVersionRemark">{{ $t('commons.remark') }}</el-checkbox>
         <el-checkbox v-model="httpForm.newVersionDeps">{{ $t('commons.relationship.name') }}</el-checkbox>
+        <el-checkbox v-model="httpForm.newVersionCase">CASE</el-checkbox>
+        <el-checkbox v-model="httpForm.newVersionMock">MOCK</el-checkbox>
       </div>
 
       <template v-slot:footer>
@@ -238,11 +240,11 @@ export default {
         status: [{required: true, message: this.$t('commons.please_select'), trigger: 'change'}],
       },
       httpForm: {environmentId: "", path: "", tags: []},
-      newData:{environmentId: "", path: "", tags: []},
-      dialogVisible:false,
+      newData: {environmentId: "", path: "", tags: []},
+      dialogVisible: false,
       isShowEnable: true,
       showFollow: false,
-      newShowFollow:false,
+      newShowFollow: false,
       maintainerOptions: [],
       currentModule: {},
       reqOptions: REQ_METHOD,
@@ -256,8 +258,8 @@ export default {
       newMockBaseUrl: "",
       count: 0,
       versionData: [],
-      oldRequest:Sampler,
-      oldResponse:{},
+      newRequest:Sampler,
+      newResponse:{},
       createNewVersionVisible: false,
     };
   },
@@ -563,17 +565,17 @@ export default {
       });
     },
     compare(row) {
-      this.$get('/api/definition/get/' +  row.id+"/"+this.httpForm.refId, response => {
+      this.$get('/api/definition/get/' + row.id + "/" + this.httpForm.refId, response => {
         this.$get('/api/definition/get/' + response.data.id, res => {
           if (res.data) {
             this.newData = res.data;
             this.dealWithTag(res.data);
-            this.setRequest(res.data)
+            this.setRequest(res.data);
             if (!this.setRequest(res.data)) {
-              this.oldRequest = createComponent("HTTPSamplerProxy");
+              this.newRequest = createComponent("HTTPSamplerProxy");
               this.dialogVisible = true;
             }
-            this.formatApi(res.data)
+            this.formatApi(res.data);
           }
         });
       });
@@ -581,26 +583,26 @@ export default {
     setRequest(api) {
       if (api.request !== undefined) {
         if (Object.prototype.toString.call(api.request).match(/\[object (\w+)\]/)[1].toLowerCase() === 'object') {
-          this.oldRequest = api.request;
+          this.newRequest = api.request;
         } else {
-          this.oldRequest = JSON.parse(api.request);
+          this.newRequest = JSON.parse(api.request);
         }
-        if (!this.oldRequest.headers) {
-          this.oldRequest.headers = [];
+        if (!this.newRequest.headers) {
+          this.newRequest.headers = [];
         }
         this.dialogVisible = true;
         return true;
       }
       return false;
     },
-    dealWithTag(api){
-      if(api.tags){
-        if(Object.prototype.toString.call(api.tags)==="[object String]"){
+    dealWithTag(api) {
+      if (api.tags) {
+        if (Object.prototype.toString.call(api.tags) === "[object String]") {
           api.tags = JSON.parse(api.tags);
         }
       }
-      if(this.httpForm.tags){
-        if(Object.prototype.toString.call(this.httpForm.tags)==="[object String]"){
+      if (this.httpForm.tags) {
+        if (Object.prototype.toString.call(this.httpForm.tags) === "[object String]") {
           this.httpForm.tags = JSON.parse(this.httpForm.tags);
         }
       }
@@ -608,23 +610,23 @@ export default {
     formatApi(api) {
       if (api.response != null && api.response !== 'null' && api.response !== undefined) {
         if (Object.prototype.toString.call(api.response).match(/\[object (\w+)\]/)[1].toLowerCase() === 'object') {
-          this.oldResponse = api.response;
+          this.newResponse = api.response;
         } else {
-          this.oldResponse = JSON.parse(api.response);
+          this.newResponse = JSON.parse(api.response);
         }
       } else {
-        this.oldResponse = {headers: [], body: new Body(), statusCode: [], type: "HTTP"};
+        this.newResponse = {headers: [], body: new Body(), statusCode: [], type: "HTTP"};
       }
-      if (!this.oldRequest.hashTree) {
-        this.oldRequest.hashTree = [];
+      if (!this.newRequest.hashTree) {
+        this.newRequest.hashTree = [];
       }
-      if (this.oldRequest.body && !this.oldRequest.body.binary) {
-        this.oldRequest.body.binary = [];
+      if (this.newRequest.body && !this.newRequest.body.binary) {
+        this.newRequest.body.binary = [];
       }
       // 处理导入数据缺失问题
-      if (this.oldResponse.body) {
+      if (this.newResponse.body) {
         let body = new Body();
-        Object.assign(body, this.oldResponse.body);
+        Object.assign(body, this.newResponse.body);
         if (!body.binary) {
           body.binary = [];
         }
@@ -634,11 +636,11 @@ export default {
         if (!body.binary) {
           body.binary = [];
         }
-        this.oldResponse.body = body;
+        this.newResponse.body = body;
       }
-      this.oldRequest.clazzName = TYPE_TO_C.get(this.oldRequest.type);
+      this.newRequest.clazzName = TYPE_TO_C.get(this.newRequest.type);
 
-      this.sort(this.oldRequest.hashTree);
+      this.sort(this.newRequest.hashTree);
     },
     sort(stepArray) {
       if (stepArray) {
@@ -647,7 +649,10 @@ export default {
             stepArray[i].clazzName = TYPE_TO_C.get(stepArray[i].type);
           }
           if (stepArray[i].type === "Assertions" && !stepArray[i].document) {
-            stepArray[i].document = {type: "JSON", data: {xmlFollowAPI: false, jsonFollowAPI: false, json: [], xml: []}};
+            stepArray[i].document = {
+              type: "JSON",
+              data: {xmlFollowAPI: false, jsonFollowAPI: false, json: [], xml: []}
+            };
           }
           if (stepArray[i].hashTree && stepArray[i].hashTree.length > 0) {
             this.sort(stepArray[i].hashTree);
@@ -670,13 +675,21 @@ export default {
       // 创建新版本
       this.httpForm.versionId = row.id;
       this.httpForm.versionName = row.name;
+
       this.$set(this.httpForm, 'newVersionRemark', !!this.httpForm.remark);
       this.$set(this.httpForm, 'newVersionDeps', this.$refs.apiOtherInfo.relationshipCount > 0);
-      if (this.$refs.apiOtherInfo.relationshipCount > 0 || this.httpForm.remark) {
-        this.createNewVersionVisible = true;
-      } else {
-        this.saveApi();
-      }
+      this.$set(this.httpForm, 'newVersionCase', this.httpForm.caseTotal > 0);
+
+      this.$post('/mockConfig/genMockConfig', {projectId: this.projectId, apiId: this.httpForm.id}, response => {
+        this.$set(this.httpForm, 'newVersionMock', response.data.mockExpectConfigList.length > 0);
+
+        if (this.$refs.apiOtherInfo.relationshipCount > 0 || this.httpForm.remark ||
+          this.httpForm.newVersionCase || this.httpForm.newVersionMock) {
+          this.createNewVersionVisible = true;
+        } else {
+          this.saveApi();
+        }
+      });
     },
     del(row) {
       this.$alert(this.$t('api_test.definition.request.delete_confirm') + ' ' + row.name + " ？", '', {
@@ -697,6 +710,9 @@ export default {
     this.getMaintainerOptions();
     if (!this.basisData.environmentId) {
       this.basisData.environmentId = "";
+    }
+    if (this.basisData.moduleId && this.basisData.moduleId === 'default-module') {
+      this.basisData.moduleId = this.moduleOptions[0].id;
     }
     this.httpForm = JSON.parse(JSON.stringify(this.basisData));
     this.$get('/api/definition/follow/' + this.basisData.id, response => {

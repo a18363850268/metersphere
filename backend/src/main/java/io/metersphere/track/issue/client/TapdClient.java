@@ -75,7 +75,7 @@ public class TapdClient extends BaseClient {
     }
 
     public JSONArray getDemands(String projectId) {
-        String url = getBaseUrl() + "/stories?workspace_id={1}";
+        String url = getBaseUrl() + "/stories?workspace_id={1}&limit=200";
         ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.GET, getAuthHttpEntity(), String.class, projectId);
         return JSONArray.parseObject(response.getBody()).getJSONArray("data");
     }
@@ -116,5 +116,12 @@ public class TapdClient extends BaseClient {
         }
         USER_NAME = config.getAccount();
         PASSWD = config.getPassword();
+    }
+
+    public boolean checkProjectExist(String relateId) {
+        String url = getBaseUrl() + "/roles?workspace_id={1}";
+        ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.GET, getAuthHttpEntity(), String.class, relateId);
+        TapdGetIssueResponse res = (TapdGetIssueResponse) getResultForObject(TapdGetIssueResponse.class, response);
+        return res == null || res.getStatus() != 404;
     }
 }

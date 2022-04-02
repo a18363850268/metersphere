@@ -125,6 +125,12 @@ public class ShareController {
         return testPlanApiCaseService.getErrorReportCases(planId);
     }
 
+    @GetMapping("/test/plan/api/case/list/unExecute/{shareId}/{planId}")
+    public List<TestPlanFailureApiDTO> getUnExecuteCases(@PathVariable String shareId, @PathVariable String planId) {
+        shareInfoService.validate(shareId, planId);
+        return testPlanApiCaseService.getUnExecuteCases(planId);
+    }
+
     @GetMapping("/test/plan/api/case/list/all/{shareId}/{planId}")
     public List<TestPlanFailureApiDTO> getApiAllList(@PathVariable String shareId, @PathVariable String planId) {
         shareInfoService.validate(shareId, planId);
@@ -149,6 +155,12 @@ public class ShareController {
         return testPlanScenarioCaseService.getErrorReportCases(planId);
     }
 
+    @GetMapping("/test/plan/scenario/case/list/unExecute/{shareId}/{planId}")
+    public List<TestPlanFailureScenarioDTO> getUnExecuteScenarioCases(@PathVariable String shareId, @PathVariable String planId) {
+        shareInfoService.validate(shareId, planId);
+        return testPlanScenarioCaseService.getUnExecuteCases(planId);
+    }
+
     @GetMapping("/api/definition/report/getReport/{shareId}/{testId}")
     public APIReportResult getApiReport(@PathVariable String shareId, @PathVariable String testId) {
 //        shareInfoService.apiReportValidate(shareId, testId);
@@ -157,7 +169,7 @@ public class ShareController {
 
     @GetMapping("/api/scenario/report/get/{shareId}/{reportId}")
     public APIScenarioReportResult get(@PathVariable String shareId, @PathVariable String reportId) {
-        shareInfoService.validate(shareId, reportId);
+        shareInfoService.validateExpired(shareId); // 测试计划，和接口都会用这个
         return apiScenarioReportService.get(reportId);
     }
 

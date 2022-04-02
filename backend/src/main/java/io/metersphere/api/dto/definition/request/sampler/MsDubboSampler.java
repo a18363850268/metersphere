@@ -83,6 +83,8 @@ public class MsDubboSampler extends MsTestElement {
         // 非导出操作，且不是启用状态则跳过执行
         if (!config.isOperating() && !this.isEnable()) {
             return;
+        }else if(config.isOperating() && StringUtils.isNotEmpty(config.getOperatingSampleTestName())){
+            this.setName(config.getOperatingSampleTestName());
         }
         if (this.getReferenced() != null && "Deleted".equals(this.getReferenced())) {
             return;
@@ -98,6 +100,7 @@ public class MsDubboSampler extends MsTestElement {
 
         final HashTree testPlanTree = tree.add(dubboSample(config));
         if (CollectionUtils.isNotEmpty(hashTree)) {
+            hashTree = ElementUtil.order(hashTree);
             hashTree.forEach(el -> {
                 el.toHashTree(testPlanTree, el.getHashTree(), config);
             });

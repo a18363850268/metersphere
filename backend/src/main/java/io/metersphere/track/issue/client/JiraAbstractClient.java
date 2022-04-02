@@ -30,7 +30,7 @@ public abstract class JiraAbstractClient extends BaseClient {
     public JiraIssue getIssues(String issuesId) {
         LogUtil.info("getIssues: " + issuesId);
         ResponseEntity<String> responseEntity;
-        responseEntity = restTemplate.exchange(getBaseUrl() + "/issue/" + issuesId, HttpMethod.GET, getAuthHttpEntity(), String.class);
+        responseEntity = restTemplate.exchange(getBaseUrl() + "/issue/" + issuesId + "?fields=status,assignee,summary,created,updated,attachment,description", HttpMethod.GET, getAuthHttpEntity(), String.class);
         return  (JiraIssue) getResultForObject(JiraIssue.class, responseEntity);
     }
 
@@ -87,7 +87,7 @@ public abstract class JiraAbstractClient extends BaseClient {
     }
 
     public List<JiraUser> getAssignableUser(String projectKey) {
-        String url = getBaseUrl() + "/user/assignable/search?project={1}";
+        String url = getBaseUrl() + "/user/assignable/search?project={1}&maxResults=" + 1000 + "&startAt=" + 0;
         ResponseEntity<String> response = null;
         try {
             response = restTemplate.exchange(url, HttpMethod.GET, getAuthHttpEntity(), String.class, projectKey);
@@ -144,6 +144,17 @@ public abstract class JiraAbstractClient extends BaseClient {
         LogUtil.info("deleteIssue: " + id);
         try {
             restTemplate.exchange(getBaseUrl() + "/issue/" + id, HttpMethod.DELETE, getAuthHttpEntity(), String.class);
+        } catch (HttpClientErrorException e) {
+            if (e.getRawStatusCode() != 404) {// 404说明jira没有，可以直接删
+                MSException.throwException(e.getMessage());
+            }
+        }
+    }
+
+    public void deleteAttachment(String id) {
+        LogUtil.info("deleteAttachment: " + id);
+        try {
+            restTemplate.exchange(getBaseUrl() + "/attachment/" + id, HttpMethod.DELETE, getAuthHttpEntity(), String.class);
         } catch (HttpClientErrorException e) {
             if (e.getRawStatusCode() != 404) {// 404说明jira没有，可以直接删
                 MSException.throwException(e.getMessage());
@@ -218,8 +229,8 @@ public abstract class JiraAbstractClient extends BaseClient {
 
     public JiraIssueListResponse getProjectIssues(int startAt, int maxResults, String projectKey, String issueType) {
         ResponseEntity<String> responseEntity;
-        responseEntity = restTemplate.exchange(getBaseUrl() + "/search?startAt={1}&maxResults={2}&jql=project={3}+AND+issuetype={4}", HttpMethod.GET, getAuthHttpEntity(), String.class,
-                startAt, maxResults, projectKey, issueType);
+        responseEntity = restTemplate.exchange(getBaseUrl() + "/search?startAt={1}&maxResults={2}&jql=project={3}+AND+issuetype={4}&fields=status,assignee,summary,created,updated,attachment,description",
+                HttpMethod.GET, getAuthHttpEntity(), String.class, startAt, maxResults, projectKey, issueType);
         return  (JiraIssueListResponse)getResultForObject(JiraIssueListResponse.class, responseEntity);
     }
 }

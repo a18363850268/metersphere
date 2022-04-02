@@ -11,7 +11,7 @@
             :label="$t('commons.id')"
             show-overflow-tooltip>
           <template v-slot:default="{row}">
-            {{ isCustomNum ? row.customNum : row.num }}
+            {{ row.isCustomNum ? row.customNum : row.num }}
           </template>
         </el-table-column>
         <el-table-column
@@ -41,6 +41,9 @@
             </el-tag>
             <el-tag size="mini" v-else-if="row.status === 'Completed'">
               {{ row.status }}
+            </el-tag>
+            <el-tag size="mini"  v-else-if="!row.status || row.status === '' ">
+              Prepare
             </el-tag>
             <el-tag size="mini" v-else>
               {{ row.status }}
@@ -90,11 +93,6 @@ export default {
         this.$emit('setSize', this.loadTestCases.length);
       }
     }
-  },
-  computed: {
-    isCustomNum() {
-      return this.$store.state.currentProjectIsCustomNum;
-    },
   },
   methods: {
     getFailureTestCase() {

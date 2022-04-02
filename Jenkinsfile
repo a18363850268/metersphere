@@ -13,11 +13,14 @@ pipeline {
         stage('Build/Test') {
             steps {
                 configFileProvider([configFile(fileId: 'metersphere-maven', targetLocation: 'settings.xml')]) {
-//                     sh "cd frontend"
-//                     sh "yarn install"
-//                     sh "cd .."
-                    sh "./mvnw clean package --settings ./settings.xml"
-                    sh "mkdir -p backend/target/dependency && (cd backend/target/dependency; jar -xf ../*.jar)"
+                    sh '''
+                        export JAVA_HOME=/opt/jdk-11
+                        export CLASSPATH=$JAVA_HOME/lib:$CLASSPATH
+                        export PATH=$JAVA_HOME/bin:$PATH
+                        java -version
+                        ./mvnw clean package --settings ./settings.xml
+                        mkdir -p backend/target/dependency && (cd backend/target/dependency; jar -xf ../*.jar)
+                    '''
                 }
             }
         }
@@ -31,12 +34,9 @@ pipeline {
         always {
             sh "echo \$WEBHOOK\n"
             withCredentials([string(credentialsId: 'wechat-bot-webhook', variable: 'WEBHOOK')]) {
-                qyWechatNotification failSend: true, mentionedId: '', mentionedMobile: '', webhookUrl: "$WEBHOOK"
+                qyWechatNotification failNotify: true, mentionedId: '', mentionedMobile: '', webhookUrl: "$WEBHOOK"
             }
-            cleanWs(cleanWhenNotBuilt: false,
-                    deleteDirs: true,
-                    disableDeferredWipeout: true,
-                    notFailBuild: true)            
+            sh "./mvnw clean"
         }
     }
 }

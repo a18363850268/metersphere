@@ -1,7 +1,7 @@
 export default {
   commons: {
     project_permission: '请先添加该项目权限',
-    no_permission:'暂无权限',
+    no_permission: '暂无权限',
     failure_continues: "失败继续",
     full_screen_editing: "全屏编辑",
     trash: "回收站",
@@ -44,11 +44,14 @@ export default {
     confirm_delete: '是否删除',
     delete_cancelled: '已取消删除',
     workspace: '工作空间',
+    space:'空间',
+    current_workspace:"当前工作空间",
     organization: '组织',
     setting: '设置',
     project: '项目',
     about_us: '关于',
     current_project: '当前项目',
+    not_exist:"不存在",
     name: '名称',
     description: '描述',
     annotation: '注释',
@@ -243,8 +246,9 @@ export default {
     follow_success: "关注成功",
     cancel_follow_success: "取消关注成功",
     type: "类型",
-    type_of_num:"请输入整数类型",
-    validity_period:'有效期',
+    type_of_integer: "请输入整数类型",
+    type_of_num: "请输入数字类型",
+    validity_period: '有效期',
     please_select_a_deadline: "请选择截止时间",
     relationship: {
       name: '依赖关系',
@@ -415,6 +419,7 @@ export default {
     open_source_version: "开源版",
     function_planning: "功能正在规划中...",
     enterprise_edition_tips: "此功能为企业版功能，<a href='https://metersphere.io/enterprise.html' target='_blank'>详情请咨询</a>",
+    ui_edition_tips: "UI自动化为企业版功能，可在官网申请试用",
     system_data: "系统数据",
     system_user: "系统用户",
     system_workspace: "工作空间",
@@ -440,6 +445,7 @@ export default {
     delete_current_version: '列表版本',
     delete_all_version: '全部版本',
     change_password_tips: '您的密码是系统初始密码，请尽快修改密码',
+    ui: 'UI 测试',
   },
   login: {
     normal_Login: "普通登录",
@@ -909,9 +915,10 @@ export default {
   report: {
     id: '报告ID',
     api_test_report: '接口测试报告',
+    scenario_test_report: '场景测试报告',
     load_test_report: '性能测试报告',
     test_plan_report: '测试计划报告',
-    report_sharing_link:'报告分享链接',
+    report_sharing_link: '报告分享链接',
     recent: '我最近的报告',
     search_by_name: '根据名称搜索',
     batch_add_monitor_tips: '格式：名称,IP,Port,描述<br/>如：项目1,192.168.1.52,9100,测试',
@@ -1120,6 +1127,7 @@ export default {
     create_performance_test_batch: "批量创建性能测试",
     batch_copy: "批量复制",
     export_config: "导出",
+    unplanned_case: "未规划用例",
     enable_validate_tip: "没有可用请求",
     copy: "复制测试",
     please_select_case: "请选择用例",
@@ -1158,14 +1166,14 @@ export default {
       rule: {
         input_code: "请输入 HTTP Code"
       },
-      range_type:{
+      range_type: {
         value_eq: "值-等于[value=]",
         value_not_eq: "值-不等于[value!=]",
-        value_contain:"值-包含[include=]",
+        value_contain: "值-包含[include=]",
         length_eq: "长度-等于[length=]",
         length_not_eq: "长度-不等于[length!=]",
-        length_large_than:"长度-大于[length>]",
-        length_shot_than:"长度-小于[length<]",
+        length_large_than: "长度-大于[length>]",
+        length_shot_than: "长度-小于[length<]",
         regular_match: "正则匹配",
       }
     },
@@ -1321,8 +1329,11 @@ export default {
       case_reduction_error_text: "请先恢复"
     },
     automation: {
-      open_expansion: "一键展开",
-      close_expansion: "一键收起",
+      open_check_message: "勾选步骤太多，最大可支持展开20个一级步骤",
+      open_expansion: "批量展开步骤",
+      close_expansion: "批量折叠步骤",
+      bulk_activation_steps: "批量启用步骤",
+      batch_disable_steps: "批量禁用步骤",
       all: "全部",
       constant: "常量",
       counter: "计数器",
@@ -1350,6 +1361,8 @@ export default {
       scenario_test: "场景",
       scenario_list: "场景列表",
       add_scenario: "创建场景",
+      all_scenario: "全部场景",
+      unplanned_scenario: "未规划场景",
       scenario_name: "场景名称",
       case_level: "用例等级",
       tag: "标签",
@@ -1467,6 +1480,7 @@ export default {
       scenario_error: "不能引用或复制自身！",
       integrated: "集合",
       independent: "独立",
+      step_info: "在右侧添加场景步骤",
     },
     request: {
       debug: "调试",
@@ -1869,10 +1883,10 @@ export default {
       execute_before_step_tip: "每一个API步骤执行前均执行一次，如请求内容加密",
       execute_post_step: "单个请求步骤后执行",
       execute_post_step_tip: "每一个API步骤执行后均执行一次，如响应内容解密",
-      execute_before_all_steps: "所有请求步骤前执行",
-      execute_before_all_steps_tip: "全部API流程开始前执行一次，如token获取及场景初始化",
-      execute_post_all_steps: "所有请求步骤后执行",
-      execute_post_all_steps_tip: "全部API流程结束后执行一次，如数据销毁及环境重置",
+      execute_before_all_steps: "所有场景步骤前执行",
+      execute_before_all_steps_tip: "全部场景开始前执行一次，如token获取及场景初始化",
+      execute_post_all_steps: "所有场景步骤后执行",
+      execute_post_all_steps_tip: "全部場景结束后执行一次，如数据销毁及环境重置",
       after_the_pre_script_step: "步骤内前置脚本后",
       before_the_pre_script_step: "步骤内前置脚本前",
       after_the_post_script_step: "步骤内后置脚本后",
@@ -2125,6 +2139,7 @@ export default {
       plan_status_running: "进行中",
       plan_status_finished: "已结束",
       plan_status_completed: "已完成",
+      plan_status_archived: "已归档",
       plan_status_trash: "废弃",
       planned_start_time: "计划开始",
       planned_end_time: "计划结束",
@@ -2226,6 +2241,7 @@ export default {
       add_module: "添加模块",
       name: "模块名称",
       delete_confirm: "确认删除模块: ",
+      delete_batch_confirm: "确认批量删除勾选的场景步骤？",
       delete_all_resource: "以及模块下所有子模块和测试用例",
       module: "模块",
       title: "标题",
@@ -2364,7 +2380,9 @@ export default {
       update_third_party_bugs: "更新第三方平台的缺陷",
       sync_bugs: "同步缺陷",
       save_before_open_comment: "请先保存缺陷再添加评论",
-      delete_tip: "确认删除缺陷："
+      delete_tip: "确认删除缺陷：",
+      check_id_exist: "检查",
+      save_project_first: "请先保存项目"
     },
     report: {
       name: "测试计划报告",
@@ -2441,6 +2459,7 @@ export default {
     SMTP_port: 'SMTP端口',
     SMTP_account: 'SMTP账户',
     SMTP_password: 'SMTP密码',
+    SMTP_from: '指定发件人',
     SSL: '开启SSL(如果SMTP端口是465，通常需要启用SSL)',
     TLS: '开启TLS(如果SMTP端口是587，通常需要启用TLS)',
     SMTP: '是否免密 SMTP',
@@ -2617,7 +2636,7 @@ export default {
   },
   variables: {
     cvs_info: "只能上传CSV文件",
-    csv_message: "默认展示2000条，完整的内容可点击下载查看。",
+    csv_message: "默认展示500条，完整的内容可点击下载查看。",
     end: "结束",
     start: "开始",
     increment: "增量",
@@ -3004,6 +3023,23 @@ export default {
       create_performance_batch: "批量创建性能测试",
       batch_copy: "批量复制",
     },
+    project_ui_scenario: {
+      name: "UI自动化",
+      read: "查询场景",
+      create: "创建场景",
+      edit: "编辑场景",
+      delete: "删除场景",
+      copy: "复制场景",
+      run: "执行场景",
+      debug: "调试场景",
+      schedule: "定时任务",
+      import: "导入场景",
+      export: "导出场景",
+      move_batch: "批量移动",
+      create_performance: "创建性能测试",
+      create_performance_batch: "批量创建性能测试",
+      batch_copy: "批量复制",
+    },
     project_api_report: {
       name: "测试报告",
       read: "查询报告",
@@ -3050,8 +3086,8 @@ export default {
       delete: "删除",
       read: "查看脚本",
     },
-    personal_information:{
-      name:'设置',
+    personal_information: {
+      name: '设置',
       personal_setting: '个人设置',
       api_keys: 'API Keys',
       edit_password: "修改密码",
@@ -3060,6 +3096,7 @@ export default {
     other: {
       track: "测试跟踪",
       api: "接口测试",
+      ui: "UI测试",
       performance: "性能测试",
       project: "项目设置",
       report: "报表统计",
@@ -3071,6 +3108,7 @@ export default {
   error_report_library: {
     name: "误报库",
     assertion: "误报断言",
+    tips: "注：在\"项目设置-设置环境-全局断言\"中启用误报将进行以下规则匹配",
     use_error_report: "启用误报",
     use_desc: "失败断言与误报规则冲突时统一处理为误报",
     option: {
@@ -3085,5 +3123,28 @@ export default {
     match_type: {
       text: "文本"
     }
+  },
+  ui: {
+    ui_automation: "UI 自动化",
+    ui_element: "元素库",
+    report: "测试报告",
+    scenario_list: "场景列表",
+    selenium_tip: "支持 Selenium-IDE 插件格式导入",
+    selenium_export_tip: "通过 MeterSphere 导出 side 文件",
+    elementObject: "元素对象",
+    elementLocator: "元素定位",
+    elementType: "所属分类",
+    not_selected: "(未选择元素)",
+    not_selected_location: "(未选择元素定位)",
+    location: "定位",
+    run: "运行",
+    locate_type: "定位方式",
+    coord: "坐标",
+    enable_or_not: "启用/禁用",
+    enable: "启用",
+    disable: "禁用",
+    resolution: "分辨率",
+    ignore_fail: "忽略异常并继续执行",
+    not_ignore_fail: "终止流程",
   }
 };

@@ -17,6 +17,7 @@
                    @setEnvGroup="setEnvGroup"
                    @setProjectEnvMap="setProjectEnvMap"
                    @showPopover="showPopover"
+                   :show-env-group="false"
                    ref="envPopover" class="env-popover"/>
     </div>
     <div>
@@ -64,7 +65,7 @@
     </div>
 
     <div class="ms-mode-div" v-if="runConfig.reportType === 'setReport'">
-      <span class="ms-mode-span">{{ $t("run_mode.report_name") }}：</span>
+      <span class="ms-mode-span-label">{{ $t("run_mode.report_name") }}：</span>
       <el-input
         v-model="runConfig.reportName"
         :placeholder="$t('commons.input_content')"
@@ -155,7 +156,7 @@ export default {
       this.runConfig.environmentGroupId = id;
     },
     getWsProjects() {
-      this.$get("/project/listAll", res => {
+      this.$get("/project/getOwnerProjects", res => {
         this.projectList = res.data;
       })
     },
@@ -188,6 +189,18 @@ export default {
 
 .ms-mode-div {
   margin-top: 20px;
+}
+
+.ms-mode-span {
+  margin-right: 10px;
+  margin-left: 10px;
+}
+
+.ms-mode-span-label:before {
+  content: '*';
+  color: #F56C6C;
+  margin-right: 4px;
+  margin-left: 10px;
 }
 
 </style>

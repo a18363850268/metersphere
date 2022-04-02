@@ -29,12 +29,21 @@ const state = {
   // 当前项目是否勾选自定义ID
   currentProjectIsCustomNum: false,
   testCaseTemplate: {},
-  scenarioMap: new Map(),
+  scenarioEnvMap: new Map(),
   apiMap: new Map(),
   apiStatus: new Map(),
   testCaseMap: new Map(),
   curTabId: null,
-  testCaseDefaultValue: {}
+  testCaseDefaultValue: {},
+  forceRerenderIndex: "",
+  currentScenario: {},
+  scenarioDefinition: {},
+  selectCommand: {},
+  //按照type分组的指令
+  groupedCmd: {},
+  librarySelectElement: {},
+  uiElementLibraryModuleIds: null,
+  refreshUiScenario: false,
 }
 
 const store = new Vuex.Store({

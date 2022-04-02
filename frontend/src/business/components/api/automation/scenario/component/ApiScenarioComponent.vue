@@ -20,7 +20,7 @@
     :envMap="envMap"
     :title="$t('commons.scenario')">
 
-    <template v-slot:afterTitle >
+    <template v-slot:afterTitle>
       <span v-if="isShowNum" @click="clickResource(scenario)">{{ "（ ID: " + scenario.num + "）" }}</span>
       <span v-else>
         <el-tooltip class="ms-num" effect="dark" :content="$t('api_test.automation.scenario.num_none')" placement="top">
@@ -67,7 +67,7 @@ import MsTcpBasisParameters from "../../../definition/components/request/tcp/Tcp
 import MsDubboBasisParameters from "../../../definition/components/request/dubbo/BasisParameters";
 import MsApiRequestForm from "../../../definition/components/request/http/ApiHttpRequestForm";
 import ApiBaseComponent from "../common/ApiBaseComponent";
-import {getCurrentProjectID, getUUID, strMapToObj} from "@/common/js/utils";
+import {getCurrentProjectID, getCurrentWorkspaceId, getUUID, strMapToObj} from "@/common/js/utils";
 import {STEP} from "@/business/components/api/automation/scenario/Setting";
 
 export default {
@@ -110,11 +110,13 @@ export default {
       }
       this.reload();
     },
+    'node.data.isBatchProcess'() {
+      if (this.node.data && this.node.data.isBatchProcess && this.node.data.referenced === 'REF') {
+        this.node.expanded = false;
+      }
+    }
   },
   created() {
-    if (!this.scenario.projectId) {
-      this.scenario.projectId = getCurrentProjectID();
-    }
     if (this.scenario.num) {
       this.isShowNum = true;
     } else {
@@ -131,7 +133,6 @@ export default {
       isShowInput: false,
       isShowNum: false,
       stepFilter: new STEP,
-      dataWorkspaceId:'',
     }
   },
   computed: {
@@ -139,13 +140,10 @@ export default {
       return this.scenario.referenced !== undefined && this.scenario.referenced === 'Deleted' || this.scenario.referenced === 'REF';
 
     },
-    projectId() {
-      return getCurrentProjectID();
-    },
   },
   methods: {
     run() {
-      if(!this.scenario.enable){
+      if (!this.scenario.enable) {
         this.$warning(this.$t('api_test.automation.debug_message'));
         return;
       }
@@ -201,7 +199,11 @@ export default {
     },
     active() {
       if (this.node) {
-        this.node.expanded = !this.node.expanded;
+        if (this.node.data && this.node.data.isBatchProcess && this.node.data.referenced === 'REF') {
+          this.node.expanded = false;
+        } else {
+          this.node.expanded = !this.node.expanded;
+        }
       }
       this.reload();
     },
@@ -247,19 +249,49 @@ export default {
       }
     },
     getProjectName(id) {
-      if (this.projectId !== id) {
+      if (id !== getCurrentProjectID()) {
         const project = this.projectList.find(p => p.id === id);
         return project ? project.name : "";
       }
 
     },
     clickResource(resource) {
+      let workspaceId = getCurrentWorkspaceId();
+      let isTurnSpace = true
+      if(resource.projectId!==getCurrentProjectID()){
+        isTurnSpace = false;
+        this.$get("/project/get/" + resource.projectId, response => {
+          if (response.data) {
+            workspaceId  = response.data.workspaceId;
+            isTurnSpace = true;
+            this.checkPermission(resource,workspaceId,isTurnSpace);
+          }
+        });
+      }else {
+        this.checkPermission(resource,workspaceId,isTurnSpace);
+      }
+
+    },
+    gotoTurn(resource,workspaceId,isTurnSpace){
       let automationData = this.$router.resolve({
         name: 'ApiAutomation',
-        params: {redirectID: getUUID(), dataType: "scenario", dataSelectRange: 'edit:' + resource.id, projectId: resource.projectId}
+        params: {redirectID: getUUID(), dataType: "scenario", dataSelectRange: 'edit:' + resource.id, projectId: resource.projectId, workspaceId: workspaceId}
       });
-      window.open(automationData.href, '_blank');
+      if(isTurnSpace){
+        window.open(automationData.href, '_blank');
+      }
+    },
+    checkPermission(resource,workspaceId,isTurnSpace){
+      this.$get('/project/getOwnerProjectIds', res => {
+        const project = res.data.find(p => p === resource.projectId);
+        if(!project){
+          this.$warning(this.$t('commons.no_permission'));
+        }else{
+          this.gotoTurn(resource,workspaceId,isTurnSpace)
+        }
+      })
     }
+
   }
 }
 </script>

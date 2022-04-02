@@ -160,7 +160,7 @@ public abstract class ZentaoClient extends BaseClient {
         return JSONObject.parseObject(response.getBody()).getJSONObject("data").getJSONArray("bugs");
     }
 
-    protected String getBaseUrl() {
+    public String getBaseUrl() {
         if (ENDPOINT.endsWith("/")) {
             return ENDPOINT.substring(0, ENDPOINT.length() - 1);
         }
@@ -187,5 +187,20 @@ public abstract class ZentaoClient extends BaseClient {
             suffix = "/" + suffix;
         }
         return String.format(replaceImgUrl, suffix);
+    }
+
+    public boolean checkProjectExist(String relateId) {
+        String sessionId = login();
+        ResponseEntity<String> response = restTemplate.exchange(requestUrl.getProductGet(),
+                HttpMethod.GET, null, String.class, relateId, sessionId);
+        try {
+            Object data = JSONObject.parseObject(response.getBody()).get("data");
+            if (!StringUtils.equals((String) data, "false")) {
+                return true;
+            }
+        } catch (Exception e) {
+            LogUtil.info("query zentao product info error. product id: " + relateId);
+        }
+        return false;
     }
 }

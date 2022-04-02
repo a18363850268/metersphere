@@ -320,6 +320,7 @@ public class ApiScenarioExecuteService {
             map = environmentGroupProjectService.getEnvMap(environmentGroupId);
         }
         ParameterConfig config = new ParameterConfig();
+        config.setScenarioId(request.getScenarioId());
         if (map != null) {
             apiScenarioEnvService.setEnvConfig(map, config);
         }
@@ -347,6 +348,8 @@ public class ApiScenarioExecuteService {
             String reportType = request.getConfig() != null ? request.getConfig().getReportType() : null;
             if (scenario != null) {
                 report.setVersionId(scenario.getVersionId());
+                String scenarioDefinition = JSON.toJSONString(request.getTestElement().getHashTree().get(0).getHashTree().get(0));
+                scenario.setScenarioDefinition(scenarioDefinition);
                 reportStructureService.save(scenario, report.getId(), reportType);
             } else {
                 if (request.getTestElement() != null && CollectionUtils.isNotEmpty(request.getTestElement().getHashTree())) {

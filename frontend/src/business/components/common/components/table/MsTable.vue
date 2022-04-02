@@ -1,25 +1,26 @@
 <template>
-  <div v-if="tableActive">
+  <div>
     <el-table
-      border
-      class="test-content adjust-table ms-table"
-      v-loading="tableIsLoading"
-      :data="data"
-      :default-sort="defaultSort"
-      :class="{'ms-select-all-fixed': showSelectAll}"
-      :height="screenHeight"
-      :row-key="rowKey"
-      :row-class-name="tableRowClassName"
-      :cell-class-name="addPaddingColClass"
-      :highlight-current-row="highlightCurrentRow"
-      @sort-change="sort"
-      @filter-change="filter"
-      @select-all="handleSelectAll"
-      @select="handleSelect"
-      @header-dragend="headerDragend"
-      @cell-mouse-enter="showPopover"
-      @row-click="handleRowClick"
-      ref="table">
+        border
+        class="test-content adjust-table ms-table"
+        v-loading="tableIsLoading"
+        :data="data"
+        :default-sort="defaultSort"
+        :class="{'ms-select-all-fixed': showSelectAll, 'row-click': rowClickStyle}"
+        :height="screenHeight"
+        :row-key="rowKey"
+        :row-class-name="tableRowClassName"
+        :cell-class-name="addPaddingColClass"
+        :highlight-current-row="highlightCurrentRow"
+        @sort-change="sort"
+        @filter-change="filter"
+        @select-all="handleSelectAll"
+        @select="handleSelect"
+        @header-dragend="headerDragend"
+        @cell-mouse-enter="showPopover"
+        @row-click="handleRowClick"
+        :key="tableActive"
+        ref="table">
 
       <el-table-column
         v-if="enableSelection"
@@ -74,7 +75,7 @@
 
       <el-table-column
         v-if="operators && operators.length > 0"
-        fixed="right"
+        :fixed="operatorFixed"
         :min-width="operatorWidth"
         :label="$t('commons.operating')">
         <template slot="header">
@@ -164,9 +165,9 @@ export default {
       selectDataCounts: 0,
       selectRows: new Set(),
       selectIds: [],
-      tableActive: true,
       // hasBatchTipShow: false,
-      defaultSort: {}
+      defaultSort: {},
+      tableActive: true
     };
   },
   props: {
@@ -225,6 +226,13 @@ export default {
         return "150px";
       }
     },
+    // 操作列的宽度
+    operatorFixed: {
+      type: [String, Boolean],
+      default() {
+        return "right";
+      }
+    },
     //开启全选
     enableSelection: {
       type: Boolean,
@@ -236,6 +244,13 @@ export default {
       type: Boolean,
       default() {
         return true;
+      }
+    },
+    // 添加鼠标移入小手样式
+    rowClickStyle: {
+      type: Boolean,
+      default() {
+        return false;
       }
     },
     tableIsLoading:{
@@ -407,7 +422,7 @@ export default {
     },
     doLayout() {
       if (this.$refs.table) {
-        setTimeout(this.$refs.table.doLayout(), 200);
+        setTimeout(this.$refs.table.doLayout, 200);
       }
     },
     filter(filters) {
@@ -482,6 +497,7 @@ export default {
     reloadTable() {
       this.tableActive = false;
       this.$nextTick(() => {
+        this.doLayout();
         this.tableActive = true;
       });
     },
@@ -552,4 +568,9 @@ export default {
 .disable-hover >>> tr:hover>td{
   background-color: #ffffff !important;
 }
+
+.row-click {
+  cursor:pointer;
+}
+
 </style>

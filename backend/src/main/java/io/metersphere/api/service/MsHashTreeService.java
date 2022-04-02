@@ -13,7 +13,6 @@ import io.metersphere.base.domain.ApiScenarioWithBLOBs;
 import io.metersphere.base.domain.ApiTestCaseWithBLOBs;
 import io.metersphere.base.mapper.ApiScenarioMapper;
 import io.metersphere.base.mapper.ext.ExtApiScenarioMapper;
-import io.metersphere.commons.utils.BeanUtils;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
@@ -22,6 +21,7 @@ import javax.annotation.Resource;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 
 @Service
 public class MsHashTreeService {
@@ -58,6 +58,8 @@ public class MsHashTreeService {
     private static final String BODY = "body";
     private static final String ARGUMENTS = "arguments";
     private static final String AUTH_MANAGER = "authManager";
+    private static final String PROJECT_ID = "projectId";
+    private static final String ACTIVE = "active";
 
     public void setHashTree(JSONArray hashTree) {
         // 将引用转成复制
@@ -182,15 +184,34 @@ public class MsHashTreeService {
                     JSONObject refElement = JSON.parseObject(apiTestCase.getRequest());
                     ElementUtil.dataFormatting(refElement);
                     JSONArray array = refElement.getJSONArray(HASH_TREE);
-                    BeanUtils.copyBean(element, refElement);
+                    ElementUtil.copyBean(element, refElement);
                     element.put(HEADERS, refElement.get(HEADERS));
                     element.put(REST, refElement.get(REST));
                     element.put(PATH, refElement.get(PATH));
                     element.put(BODY, refElement.get(BODY));
+                    element.put(ACTIVE, false);
                     element.put(AUTH_MANAGER, refElement.get(AUTH_MANAGER));
                     element.put(ARGUMENTS, refElement.get(ARGUMENTS));
+                    element.put(PROJECT_ID, apiTestCase.getProjectId());
                     if (array != null) {
-                        ElementUtil.mergeHashTree(element, refElement.getJSONArray(HASH_TREE));
+                        JSONArray sourceHashTree = element.getJSONArray(HASH_TREE);
+                        Map<String, List<JSONObject>> groupMap = ElementUtil.group(sourceHashTree);
+                        Map<String, List<JSONObject>> targetGroupMap = ElementUtil.group(refElement.getJSONArray(HASH_TREE));
+
+                        List<JSONObject> pre = ElementUtil.mergeHashTree(groupMap.get("PRE"), targetGroupMap.get("PRE"));
+                        List<JSONObject> post = ElementUtil.mergeHashTree(groupMap.get("POST"), targetGroupMap.get("POST"));
+                        List<JSONObject> rules = ElementUtil.mergeHashTree(groupMap.get("ASSERTIONS"), targetGroupMap.get("ASSERTIONS"));
+                        JSONArray step = new JSONArray();
+                        if (CollectionUtils.isNotEmpty(pre)) {
+                            step.addAll(pre);
+                        }
+                        if (CollectionUtils.isNotEmpty(post)) {
+                            step.addAll(post);
+                        }
+                        if (CollectionUtils.isNotEmpty(rules)) {
+                            step.addAll(rules);
+                        }
+                        element.put(HASH_TREE, step);
                     }
                     element.put(REFERENCED, REF);
                     element.put(DISABLED, true);
@@ -201,11 +222,13 @@ public class MsHashTreeService {
                 this.setElement(element, apiTestCase.getNum(), enable, apiTestCase.getVersionName(), apiTestCase.getVersionEnable());
             }
         } else {
-            ApiDefinitionResult definitionWithBLOBs = apiDefinitionService.getById(element.getString(ID));
-            if (definitionWithBLOBs != null) {
-                element.put(ID, definitionWithBLOBs.getId());
-                this.setElement(element, definitionWithBLOBs.getNum(), enable, definitionWithBLOBs.getVersionName(), definitionWithBLOBs.getVersionEnable());
-                isExist = true;
+            if (StringUtils.equalsIgnoreCase(element.getString(REFERENCED), "Copy")) {
+                ApiDefinitionResult definitionWithBLOBs = apiDefinitionService.getById(element.getString(ID));
+                if (definitionWithBLOBs != null) {
+                    element.put(ID, definitionWithBLOBs.getId());
+                    this.setElement(element, definitionWithBLOBs.getNum(), enable, definitionWithBLOBs.getVersionName(), definitionWithBLOBs.getVersionEnable());
+                    isExist = true;
+                }
             }
         }
         if (!isExist) {

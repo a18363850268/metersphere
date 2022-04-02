@@ -1,47 +1,45 @@
 <template>
   <div class="request-form">
-    <keep-alive>
-      <component
-        v-bind:is="component"
-        :isMax="isMax"
-        :show-btn="showBtn"
-        :show-version = "showVersion"
-        :expandedNode="expandedNode"
-        :scenario="scenario"
-        :controller="scenario"
-        :timer="scenario"
-        :assertions="scenario"
-        :extract="scenario"
-        :jsr223-processor="scenario"
-        :request="scenario"
-        :currentScenario="currentScenario"
-        :currentEnvironmentId="currentEnvironmentId"
-        :node="node"
-        :draggable="draggable"
-        :title="title"
-        :color="titleColor"
-        :response="response"
-        :environment-type="environmentType"
-        :environment-group-id="envGroupId"
-        :background-color="backgroundColor"
-        :project-list="projectList"
-        :env-map="envMap"
-        :message="message"
-        :api-id="apiId"
-        :scenario-definition="scenarioDefinition"
-        :if-from-variable-advance="ifFromVariableAdvance"
-        @suggestClick="suggestClick(node)"
-        @remove="remove"
-        @runScenario="runScenario"
-        @stopScenario="stopScenario"
-        @copyRow="copyRow"
-        @refReload="refReload"
-        @openScenario="openScenario"
-        @setDomain="setDomain"
-        @savePreParams="savePreParams"
-        @editScenarioAdvance="editScenarioAdvance"
-      />
-    </keep-alive>
+    <component
+      v-bind:is="component"
+      :isMax="isMax"
+      :show-btn="showBtn"
+      :show-version="showVersion"
+      :scenario="scenario"
+      :controller="scenario"
+      :timer="scenario"
+      :assertions="scenario"
+      :extract="scenario"
+      :command="scenario"
+      :jsr223-processor="scenario"
+      :request="scenario"
+      :currentScenario="currentScenario"
+      :currentEnvironmentId="currentEnvironmentId"
+      :node="node"
+      :draggable="draggable"
+      :title="title"
+      :color="titleColor"
+      :response="response"
+      :environment-type="environmentType"
+      :environment-group-id="envGroupId"
+      :background-color="backgroundColor"
+      :project-list="projectList"
+      :env-map="envMap"
+      :message="message"
+      :api-id="apiId"
+      :scenario-definition="scenarioDefinition"
+      :if-from-variable-advance="ifFromVariableAdvance"
+      @suggestClick="suggestClick(node)"
+      @remove="remove"
+      @runScenario="runScenario"
+      @stopScenario="stopScenario"
+      @copyRow="copyRow"
+      @refReload="refReload"
+      @openScenario="openScenario"
+      @setDomain="setDomain"
+      @savePreParams="savePreParams"
+      @editScenarioAdvance="editScenarioAdvance"
+    />
   </div>
 </template>
 
@@ -54,6 +52,9 @@ import MsLoopController from "./LoopController";
 import MsApiScenarioComponent from "./ApiScenarioComponent";
 import JmeterElementComponent from "./JmeterElementComponent";
 import PluginComponent from "./PluginComponent";
+const requireComponent = require.context('@/business/components/xpack/', true, /\.vue$/);
+const MsUiCommand = requireComponent.keys().length > 0 ? requireComponent("./ui/automation/scenario/component/MsUiCommandComponent.vue") : {};
+const MsUiScenarioComponent = requireComponent.keys().length > 0 ? requireComponent("./ui/automation/scenario/component/MsUiScenarioComponent.vue") : {};
 
 export default {
   name: "ComponentConfig",
@@ -70,11 +71,15 @@ export default {
     MsApiAssertions: () => import("../../../definition/components/assertion/ApiAssertions"),
     MsApiExtract: () => import("../../../definition/components/extract/ApiExtract"),
     MsJdbcProcessor: () => import("@/business/components/api/automation/scenario/component/JDBCProcessor"),
+    // MsUiCommand: () => import("@/business/components/xpack/ui/automation/scenario/component/MsUiCommandComponent")
+    'MsUiCommand': MsUiCommand.default,
+    'MsUiScenarioComponent': MsUiScenarioComponent.default,
   },
   props: {
     type: String,
     message: String,
     scenario: {},
+    command: {},
     draggable: {
       type: Boolean,
       default: true,
@@ -92,7 +97,6 @@ export default {
       default: true,
     },
     currentScenario: {},
-    expandedNode: Array,
     currentEnvironmentId: String,
     response: {},
     node: {},
@@ -174,6 +178,9 @@ export default {
           break;
         case "TCPSampler":
           name = "MsApiComponent";
+          break;
+        case "MsUiCommand":
+          name = "MsUiCommand";
           break;
         default:
           name = this.getComponent(ELEMENT_TYPE.Plugin);

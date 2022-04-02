@@ -48,11 +48,13 @@ export default {
       this.$refs.resultsTree.root.expanded = true;
     }
   },
+  computed: {
+    isUi() {
+      return this.report.reportType && this.report.reportType.startsWith("UI");
+    },
+  },
   methods: {
     filterNode(value, data) {
-      if (!data.value && data.children && data.children.length > 0) {
-        return true;
-      }
       if (!data.value && !data.children && data.children.length === 0) {
         return false;
       }
@@ -62,9 +64,13 @@ export default {
           if (data.errorCode && data.errorCode !== "") {
             return true;
           }
-        } else {
+        }else if (value === 'unexecute') {
+          if(data.value.status === 'unexecute'){
+            return true;
+          }
+        }else {
           if (!data.errorCode || data.errorCode === "") {
-            return data.value.error > 0;
+            return data.value.error > 0 || (this.isUi && !data.value.success && data.value.body);
           }
         }
       }

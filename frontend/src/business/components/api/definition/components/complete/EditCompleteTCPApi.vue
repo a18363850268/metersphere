@@ -89,11 +89,11 @@
         :new-data="newData"
         :new-show-follow="newShowFollow"
         :module-options="moduleOptions"
-        :request="request"
-        :old-request="oldRequest"
+        :request="newRequest"
+        :old-request="request"
         :mock-info="mockInfo"
         :api-protocol="apiProtocol"
-        :old-api-protocol="oldApiProtocol"
+        :old-api-protocol="newApiProtocol"
         :show-xpack-compnent="showXpackCompnent"
         :method-types="methodTypes"
       ></t-c-p-api-version-diff>
@@ -108,6 +108,8 @@
       <div>
         <el-checkbox v-model="basisData.newVersionRemark">{{ $t('commons.remark') }}</el-checkbox>
         <el-checkbox v-model="basisData.newVersionDeps">{{ $t('commons.relationship.name') }}</el-checkbox>
+        <el-checkbox v-model="basisData.newVersionCase">CASE</el-checkbox>
+        <el-checkbox v-model="basisData.newVersionMock">MOCK</el-checkbox>
       </div>
 
       <template v-slot:footer>
@@ -176,9 +178,9 @@ export default {
       dialogVisible: false,
       newShowFollow: false,
       newData: {},
-      oldRequest: {},
-      oldResponse: {},
-      oldApiProtocol: "TCP",
+      newRequest: {},
+      newResponse: {},
+      newApiProtocol: "TCP",
       createNewVersionVisible: false,
     };
   },
@@ -369,14 +371,14 @@ export default {
             if (this.newData.method !== 'TCP' && this.newData.method !== 'ESB') {
               this.newData.method = this.newData.protocol;
             }
-            this.oldApiProtocol = this.basisData.method;
-            if (this.oldApiProtocol == null || this.oldApiProtocol === "") {
-              this.oldApiProtocol = "TCP";
+            this.newApiProtocol = this.basisData.method;
+            if (this.newApiProtocol == null || this.newApiProtocol === "") {
+              this.newApiProtocol = "TCP";
             }
             this.dealWithTag(res.data);
             this.setRequest(res.data)
             if (!this.setRequest(res.data)) {
-              this.oldRequest = createComponent("TCPSampler");
+              this.newRequest = createComponent("TCPSampler");
               this.dialogVisible = true;
             }
             this.formatApi(res.data)
@@ -388,12 +390,12 @@ export default {
     setRequest(api) {
       if (api.request !== undefined) {
         if (Object.prototype.toString.call(api.request).match(/\[object (\w+)\]/)[1].toLowerCase() === 'object') {
-          this.oldRequest = api.request;
+          this.newRequest = api.request;
         } else {
-          this.oldRequest = JSON.parse(api.request);
+          this.newRequest = JSON.parse(api.request);
         }
-        if (!this.oldRequest.headers) {
-          this.oldRequest.headers = [];
+        if (!this.newRequest.headers) {
+          this.newRequest.headers = [];
         }
         this.dialogVisible = true;
         return true;
@@ -415,23 +417,23 @@ export default {
     formatApi(api) {
       if (api.response != null && api.response !== 'null' && api.response !== undefined) {
         if (Object.prototype.toString.call(api.response).match(/\[object (\w+)\]/)[1].toLowerCase() === 'object') {
-          this.oldResponse = api.response;
+          this.newResponse = api.response;
         } else {
-          this.oldResponse = JSON.parse(api.response);
+          this.newResponse = JSON.parse(api.response);
         }
       } else {
-        this.oldResponse = {headers: [], body: new Body(), statusCode: [], type: "HTTP"};
+        this.newResponse = {headers: [], body: new Body(), statusCode: [], type: "HTTP"};
       }
-      if (!this.oldRequest.hashTree) {
-        this.oldRequest.hashTree = [];
+      if (!this.newRequest.hashTree) {
+        this.newRequest.hashTree = [];
       }
-      if (this.oldRequest.body && !this.oldRequest.body.binary) {
-        this.oldRequest.body.binary = [];
+      if (this.newRequest.body && !this.newRequest.body.binary) {
+        this.newRequest.body.binary = [];
       }
       // 处理导入数据缺失问题
-      if (this.oldResponse.body) {
+      if (this.newResponse.body) {
         let body = new Body();
-        Object.assign(body, this.oldResponse.body);
+        Object.assign(body, this.newResponse.body);
         if (!body.binary) {
           body.binary = [];
         }
@@ -441,11 +443,11 @@ export default {
         if (!body.binary) {
           body.binary = [];
         }
-        this.oldResponse.body = body;
+        this.newResponse.body = body;
       }
-      this.oldRequest.clazzName = TYPE_TO_C.get(this.oldRequest.type);
+      this.newRequest.clazzName = TYPE_TO_C.get(this.newRequest.type);
 
-      this.sort(this.oldRequest.hashTree);
+      this.sort(this.newRequest.hashTree);
     },
     sort(stepArray) {
       if (stepArray) {
@@ -482,11 +484,18 @@ export default {
       this.basisData.versionName = row.name;
       this.$set(this.basisData, 'newVersionRemark', !!this.basisData.remark);
       this.$set(this.basisData, 'newVersionDeps', this.$refs.apiOtherInfo.relationshipCount > 0);
-      if (this.$refs.apiOtherInfo.relationshipCount > 0 || this.basisData.remark) {
-        this.createNewVersionVisible = true;
-      } else {
-        this.saveApi();
-      }
+      this.$set(this.basisData, 'newVersionCase', this.basisData.caseTotal > 0);
+
+      this.$post('/mockConfig/genMockConfig', {projectId: this.projectId, apiId: this.basisData.id}, response => {
+        this.$set(this.basisData, 'newVersionMock', response.data.mockExpectConfigList.length > 0);
+
+        if (this.$refs.apiOtherInfo.relationshipCount > 0 || this.basisData.remark ||
+          this.basisData.newVersionCase || this.basisData.newVersionMock) {
+          this.createNewVersionVisible = true;
+        } else {
+          this.saveApi();
+        }
+      });
     },
     del(row) {
       this.$alert(this.$t('api_test.definition.request.delete_confirm') + ' ' + row.name + " ？", '', {

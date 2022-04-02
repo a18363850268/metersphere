@@ -27,10 +27,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import javax.annotation.Resource;
-import java.util.Date;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -81,7 +78,6 @@ public class ScheduleService {
     }
 
     public Schedule getScheduleByResource(String resourceId, String group) {
-
         ScheduleExample example = new ScheduleExample();
         example.createCriteria().andResourceIdEqualTo(resourceId).andGroupEqualTo(group);
         List<Schedule> schedules = scheduleMapper.selectByExample(example);
@@ -89,6 +85,19 @@ public class ScheduleService {
             return schedules.get(0);
         }
         return null;
+    }
+
+    public List<Schedule> getScheduleByResourceIds(List<String>resourceIds, String group) {
+        ScheduleExample example = new ScheduleExample();
+        if(resourceIds.size()==0){
+            return new ArrayList<>();
+        }
+        example.createCriteria().andResourceIdIn(resourceIds).andGroupEqualTo(group);
+        List<Schedule> schedules = scheduleMapper.selectByExample(example);
+        if (schedules.size() > 0) {
+            return schedules;
+        }
+        return new ArrayList<>();
     }
 
     public int deleteByResourceId(String resourceId, String group) {
@@ -179,6 +188,9 @@ public class ScheduleService {
         } catch (Exception e) {
             LogUtil.error(e);
             MSException.throwException("重置定时任务-删除旧定时任务时出现异常");
+        }
+        if(!request.getEnable()){
+            return;
         }
         try {
             scheduleManager.addCronJob(jobKey, triggerKey, clazz, request.getValue(),

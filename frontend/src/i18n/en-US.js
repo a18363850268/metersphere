@@ -45,11 +45,14 @@ export default {
     delete_cancelled: 'Delete cancelled',
     option_cannot_spread_pages: 'This options not support spread pages.Do you want continue?',
     workspace: 'Workspace',
+    space:'Space',
+    current_workspace:"Current Workspace",
     organization: 'Organization',
     setting: 'Setting',
     project: 'Project',
     about_us: 'About Us',
     current_project: 'Current Project',
+    not_exist:"Not exist",
     name: 'Name',
     description: 'Description',
     annotation: 'Annotation',
@@ -243,7 +246,8 @@ export default {
     cancel_follow_success: "Cancel Follow Success",
     generate_test_data: "Generate test data",
     type: "Type",
-    type_of_num: "Please enter an integer type",
+    type_of_num: "Please enter an number type",
+    type_of_integer: "Please enter an integer type",
     validity_period: 'Validity Period',
     please_select_a_deadline: "Please select a deadline",
     relationship: {
@@ -324,7 +328,7 @@ export default {
     },
     monitor: "Monitor",
     all_label: {
-      case: "all",
+      case: "All Case",
       review: "all"
     },
     image: 'Image',
@@ -414,6 +418,7 @@ export default {
     open_source_version: "OPEN-SOURCE",
     function_planning: "The function is being planned...",
     enterprise_edition_tips: "This is an enterprise edition feature, <a href='https://metersphere.io/enterprise.html' target='_blank'>please consult for details</a>",
+    ui_edition_tips: "UI automation is an enterprise version function, you can apply for a trial on the official website",
     system_data: "System Data",
     system_user: "User",
     system_workspace: "Workspace",
@@ -437,7 +442,8 @@ export default {
     sync_other_info: "Copy other config",
     delete_current_version: 'Current version',
     delete_all_version: 'All versions',
-    change_password_tips: 'Your password is the initial system password, please change it as soon as possible'
+    change_password_tips: 'Your password is the initial system password, please change it as soon as possible',
+    ui: 'UI TEST',
   },
   login: {
     normal_Login: "Normal Login",
@@ -905,6 +911,7 @@ export default {
   report: {
     id: 'Report ID',
     api_test_report: 'Api Test Report',
+    scenario_test_report: 'Scenario Test Report',
     load_test_report: 'Load Test Report',
     test_plan_report: 'Test Plan Report',
     report_sharing_link: 'Report Sharing Link',
@@ -1110,6 +1117,7 @@ export default {
     copied: "copied",
     key: "Key",
     value: "Value",
+    unplanned_case: "Unplanned Case",
     create_performance_test: "Create Performance Test",
     create_performance_test_batch: "Batch Create Performance Test",
     batch_copy: "Batch Copy",
@@ -1316,8 +1324,11 @@ export default {
       case_reduction_error_text: "Please restore first"
     },
     automation: {
-      open_expansion: "One-click expansion",
-      close_expansion: "One-click storage",
+      open_check_message: "There are too many steps to check, and a maximum of 20 first-level steps can be supported.",
+      open_expansion: "Batch Folding Steps",
+      close_expansion: "Bulk Expand Steps",
+      bulk_activation_steps: "Bulk activation steps",
+      batch_disable_steps: "Batch disable steps",
       all: "all",
       constant: "constant",
       counter: "counter",
@@ -1345,6 +1356,8 @@ export default {
       scenario_test: "Scenario test",
       scenario_list: "Scenario List",
       add_scenario: "Add scenario",
+      all_scenario: "All scenario",
+      unplanned_scenario: "Unplanned Scenario",
       scenario_name: "Scenario Name",
       case_level: "Case Level",
       tag: "Tag",
@@ -1463,6 +1476,7 @@ export default {
       scenario_error: "Cannot reference or copy itself！",
       integrated: "Integrated",
       independent: "Independent",
+      step_info: "Add a scene step on the right",
     },
     request: {
       debug: "Debug",
@@ -1865,9 +1879,9 @@ export default {
       execute_post_step: "Execute after single",
       execute_post_step_tip: "Execute every time after each API step, such as response decryption",
       execute_before_all_steps: "Execute before all",
-      execute_before_all_steps_tip: "Execute once before the start of all API steps, such as token acquisition and scene initialization",
+      execute_before_all_steps_tip: "Execute once before the start of all API Scenario, such as token acquisition and scene initialization",
       execute_post_all_steps: "Execute after all",
-      execute_post_all_steps_tip: "Execute once after the end of all API steps, such as data destruction and scene reset",
+      execute_post_all_steps_tip: "Execute once after the end of all API Scenario, such as data destruction and scene reset",
       after_the_pre_script_step: "After the pre-script in the step",
       before_the_pre_script_step: "Before pre-script in step",
       after_the_post_script_step: "After the script is placed in the step",
@@ -2125,6 +2139,7 @@ export default {
       plan_status_running: "Starting",
       plan_status_finished: "Finished",
       plan_status_completed: "Completed",
+      plan_status_archived: "Archived",
       plan_status_trash: "Trashed",
       planned_start_time: "Start Time",
       planned_end_time: "End Time",
@@ -2222,6 +2237,7 @@ export default {
       name: "Name",
       delete_confirm: "Confirm delete module:",
       delete_all_resource: "and all submodules and test cases under the module",
+      delete_batch_confirm: "Steps to confirm batch deletion of selected scenarios？",
       module: "Module",
       title: "Title",
       describe: "Describe",
@@ -2359,7 +2375,9 @@ export default {
       update_third_party_bugs: "Update the defects of third-party platforms",
       sync_bugs: "Synchronization Issue",
       save_before_open_comment: "Please save issue before comment",
-      delete_tip: "Confirm Delete Issue："
+      delete_tip: "Confirm Delete Issue：",
+      check_id_exist: "Check",
+      save_project_first: "Please save the project first"
     },
     report: {
       name: "Test Plan Report",
@@ -2437,6 +2455,7 @@ export default {
     SMTP_port: 'SMTP port',
     SMTP_account: 'SMTP account',
     SMTP_password: 'SMTP password',
+    SMTP_from: 'From',
     SSL: 'Turn on SSL (if the SMTP port is 465, you usually need to enable SSL)',
     TLS: 'Turn on TLS (if the SMTP port is 587, you usually need to enable TLS)',
     SMTP: 'Anonymous SMTP or not',
@@ -2445,7 +2464,6 @@ export default {
     account: 'Account cannot be empty',
     test_recipients: 'Test recipients',
     tip: 'Tip: use as test mail recipient only',
-
   },
   i18n: {
     home: 'Home',
@@ -2614,7 +2632,7 @@ export default {
   },
   variables: {
     ƒ: "Only CSV files can be uploaded",
-    csv_message: "2000 items are displayed by default, and the complete content can be downloaded and viewed.",
+    csv_message: "500 items are displayed by default, and the complete content can be downloaded and viewed.",
     end: "end",
     start: "start",
     increment: "increment",
@@ -3001,6 +3019,23 @@ export default {
       create_performance_batch: "BATCH CREATE PERFORMANCE",
       batch_copy: "BATCH COPY",
     },
+    project_ui_scenario: {
+      name: "Scenario",
+      read: "READ",
+      create: "CREATE",
+      edit: "EDIT",
+      delete: "DELETE",
+      copy: "COPY",
+      run: "RUN",
+      debug: "DEBUG",
+      schedule: "SCHEDULE",
+      import: "IMPORT",
+      export: "EXPORT",
+      move_batch: "MOVE BATCH",
+      create_performance: "CREATE PERFORMANCE",
+      create_performance_batch: "BATCH CREATE PERFORMANCE",
+      batch_copy: "BATCH COPY",
+    },
     project_api_report: {
       name: "Report",
       read: "READ",
@@ -3056,6 +3091,7 @@ export default {
     other: {
       track: "Track",
       api: "API",
+      ui: "UI",
       performance: "Performance",
       project: "Project",
       report: "Report Statistics"
@@ -3067,6 +3103,7 @@ export default {
   error_report_library: {
     name: "Error report",
     assertion: "Error code assertion",
+    tips:"Tips: Use error report in \"Project Settings - Project environment-Assertions\"",
     use_error_report: "Use error code",
     use_desc: "In case of conflict between error code and error assertions, it is treated as error code",
     option: {
@@ -3081,5 +3118,10 @@ export default {
     match_type: {
       text: "TXT"
     }
+  },
+  ui: {
+    ui_automation: "UI Automation",
+    ui_element: "UI Element Library",
+    report: "Test Report",
   }
 };

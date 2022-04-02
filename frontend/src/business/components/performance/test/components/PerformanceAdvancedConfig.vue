@@ -522,12 +522,7 @@ export default {
       }
     },
     csvFiles() {
-      if (this.csvConfig && this.csvFiles) {
-        this.csvFiles.forEach(f => {
-          f.csvSplit = this.csvConfig[f.name]?.csvSplit;
-          f.csvHasHeader = this.csvConfig[f.name]?.csvHasHeader;
-        });
-      }
+      this.refreshCsv();
     }
   },
   methods: {
@@ -553,8 +548,17 @@ export default {
           this.properties = data.properties || [];
           this.systemProperties = data.systemProperties || [];
           this.csvConfig = data.csvConfig;
+          this.refreshCsv();
         }
       });
+    },
+    refreshCsv() {
+      if (this.csvConfig && this.csvFiles) {
+        this.csvFiles.forEach(f => {
+          f.csvSplit = this.csvConfig[f.name]?.csvSplit;
+          f.csvHasHeader = this.csvConfig[f.name]?.csvHasHeader;
+        });
+      }
     },
     add(dataName) {
       if (dataName === 'domains') {
@@ -690,6 +694,16 @@ export default {
       params.forEach(item => {
         let line = item.split(/，|,/);
         if (line.length < 3) {
+          return;
+        }
+        let ipRe = new RegExp("^[0-9a-zA-Z,\.]*$");
+        if(!ipRe.test(line[1])){
+          this.$message.warning("ip"+this.$t("commons.formatErr"));
+          return;
+        }
+        let numRe = new RegExp("^[0-9]*$");
+        if(!numRe.test(line[2])){
+          this.$message.warning("Port"+this.$t("commons.type_of_num"));
           return;
         }
         keyValues.push({
