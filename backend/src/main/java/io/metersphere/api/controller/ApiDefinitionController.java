@@ -42,7 +42,6 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.annotation.Resource;
-import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.util.List;
 
@@ -180,7 +179,6 @@ public class ApiDefinitionController {
     @PostMapping(value = "/run/debug", consumes = {"multipart/form-data"})
     @MsAuditLog(module = OperLogModule.API_DEFINITION, type = OperLogConstants.DEBUG, title = "#request.name", project = "#request.projectId")
     public MsExecResponseDTO runDebug(@RequestPart("request") RunDefinitionRequest request, @RequestPart(value = "files", required = false) List<MultipartFile> bodyFiles) {
-        request.setDebug(true);
         return apiDefinitionService.run(request, bodyFiles);
     }
 
@@ -276,7 +274,7 @@ public class ApiDefinitionController {
     @RequiresPermissions(PermissionConstants.PROJECT_API_DEFINITION_READ_EDIT_API)
     @MsAuditLog(module = OperLogModule.API_DEFINITION, type = OperLogConstants.BATCH_UPDATE, beforeEvent = "#msClass.getLogDetails(#request)", content = "#msClass.getLogDetails(#request)", msClass = ApiDefinitionService.class)
     @SendNotice(taskType = NoticeConstants.TaskType.API_DEFINITION_TASK, event = NoticeConstants.Event.UPDATE, target = "#targetClass.getBLOBs(#request.ids)", targetClass = ApiDefinitionService.class,
-            mailTemplate = "api/DefinitionUpdate", subject = "接口定义通知")
+           mailTemplate = "api/DefinitionUpdate", subject = "接口定义通知")
     public void editByParams(@RequestBody ApiBatchRequest request) {
         apiDefinitionService.editApiByParam(request);
     }

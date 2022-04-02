@@ -92,6 +92,10 @@ public class MsJDBCPostProcessor extends MsTestElement {
 
         // 数据兼容处理
         if (config.getConfig() != null && StringUtils.isNotEmpty(this.getProjectId()) && config.getConfig().containsKey(this.getProjectId())) {
+            EnvironmentConfig environmentConfig = config.getConfig().get(this.getProjectId());
+            if(environmentConfig.getDatabaseConfigs() != null){
+                this.environmentId = environmentConfig.getApiEnvironmentid();
+            }
             // 1.8 之后 当前正常数据
         } else if (config.getConfig() != null && config.getConfig().containsKey(getParentProjectId())) {
             // 1.8 前后 混合数据
@@ -130,7 +134,8 @@ public class MsJDBCPostProcessor extends MsTestElement {
                 this.initDataSource();
             }
             if (this.dataSource == null) {
-                MSException.throwException("数据源为空无法执行");
+                String message = "数据源为空请选择数据源";
+                MSException.throwException(StringUtils.isNotEmpty(this.getName()) ? this.getName() + "：" + message : message);
             }
         }
         final HashTree samplerHashTree = tree.add(jdbcPostProcessor(config));
@@ -241,7 +246,7 @@ public class MsJDBCPostProcessor extends MsTestElement {
     private JDBCPostProcessor jdbcPostProcessor(ParameterConfig config) {
         JDBCPostProcessor jdbcPostProcessor = new JDBCPostProcessor();
         jdbcPostProcessor.setEnabled(this.isEnable());
-        jdbcPostProcessor.setName(this.getName() == null? "JDBCPostProcessor" : this.getName());
+        jdbcPostProcessor.setName(this.getName() == null ? "JDBCPostProcessor" : this.getName());
         jdbcPostProcessor.setProperty(TestElement.TEST_CLASS, JDBCPostProcessor.class.getName());
         jdbcPostProcessor.setProperty(TestElement.GUI_CLASS, SaveService.aliasToClass("TestBeanGUI"));
 

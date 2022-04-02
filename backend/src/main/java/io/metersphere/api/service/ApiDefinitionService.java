@@ -307,8 +307,13 @@ public class ApiDefinitionService {
         if (StringUtils.equals(request.getProtocol(), "DUBBO")) {
             request.setMethod("dubbo://");
         }
+        if (StringUtils.isNotEmpty(request.getSourceId())) {
+            // 检查附件复制出附件
+            FileUtils.copyBodyFiles(request.getSourceId(), request.getId());
+        } else {
+            FileUtils.createBodyFiles(request.getRequest().getId(), bodyFiles);
+        }
         ApiDefinitionWithBLOBs returnModel = createTest(request);
-        FileUtils.createBodyFiles(request.getRequest().getId(), bodyFiles);
         return returnModel;
     }
 
@@ -716,7 +721,7 @@ public class ApiDefinitionService {
         return test;
     }
 
-    private int getNextNum(String projectId) {
+    public int getNextNum(String projectId) {
         ApiDefinition apiDefinition = extApiDefinitionMapper.getNextNum(projectId);
         if (apiDefinition == null || apiDefinition.getNum() == null) {
             return 100001;
@@ -741,10 +746,15 @@ public class ApiDefinitionService {
         } else {
             apiDefinition.setUserId(apiDefinition.getUserId());
         }
+        if (apiDefinition.getModuleId() == null) {
+            if (StringUtils.isEmpty(apiDefinition.getModuleId()) || "default-module".equals(apiDefinition.getModuleId())) {
+                initModulePathAndId(apiDefinition.getProjectId(), apiDefinition);
+            }
+        }
         apiDefinition.setDescription(apiDefinition.getDescription());
 
         List<ApiDefinition> sameRequest;
-        if (repeatable == null || repeatable == false) {
+        if (repeatable == null || !repeatable) {
             sameRequest = getSameRequest(saveReq);
         } else {
             // 如果勾选了允许重复，则判断更新要加上name字段
@@ -857,6 +867,9 @@ public class ApiDefinitionService {
                 apiDefinition.setVersionId(apiTestImportRequest.getUpdateVersionId());
                 apiDefinition.setNum(sameRequest.get(0).getNum()); // 使用第一个num当作本次的num
                 apiDefinition.setOrder(sameRequest.get(0).getOrder());
+                if (sameRequest.get(0).getUserId() != null) {
+                    apiDefinition.setUserId(sameRequest.get(0).getUserId());
+                }
                 batchMapper.insert(apiDefinition);
             } else {
                 ApiDefinition existApi = apiOp.get();
@@ -866,6 +879,9 @@ public class ApiDefinitionService {
                 apiDefinition.setNum(existApi.getNum()); //id 不变
                 apiDefinition.setRefId(existApi.getRefId());
                 apiDefinition.setVersionId(apiTestImportRequest.getUpdateVersionId());
+                if (existApi.getUserId() != null) {
+                    apiDefinition.setUserId(existApi.getUserId());
+                }
                 // case 设置版本
                 cases.forEach(c -> {
                     c.setVersionId(apiDefinition.getVersionId());
@@ -1052,6 +1068,13 @@ public class ApiDefinitionService {
             result.setProjectId(request.getProjectId());
             result.setTriggerMode(TriggerMode.MANUAL.name());
             apiDefinitionExecResultMapper.insert(result);
+        }
+        if (request.isEditCaseRequest() && CollectionUtils.isNotEmpty(request.getTestElement().getHashTree()) &&
+                CollectionUtils.isNotEmpty(request.getTestElement().getHashTree().get(0).getHashTree())) {
+            ApiTestCaseWithBLOBs record = new ApiTestCaseWithBLOBs();
+            record.setRequest(JSON.toJSONString(request.getTestElement().getHashTree().get(0).getHashTree().get(0)));
+            record.setId(request.getTestElement().getHashTree().get(0).getHashTree().get(0).getName());
+            apiTestCaseMapper.updateByPrimaryKeySelective(record);
         }
         return apiExecuteService.debug(request, bodyFiles);
     }
@@ -1458,7 +1481,7 @@ public class ApiDefinitionService {
                     }
                 } else {
                     res.setCaseType("apiCase");
-                    res.setCaseTotal("-");
+                    res.setCaseTotal("0");
                     res.setCasePassingRate("-");
                     res.setCaseStatus("-");
                 }
@@ -1634,18 +1657,9 @@ public class ApiDefinitionService {
         return extApiDefinitionMapper.selectEffectiveIdByProjectId(projectId);
     }
 
-//    public List<ApiDefinition> selectByProjectIdAndMethodAndUrl(String projectId, String method,String url) {
-//        ApiDefinitionExample example = new ApiDefinitionExample();
-//        ApiDefinitionExample.Criteria criteria = example.createCriteria().andMethodEqualTo(method).andProjectIdEqualTo(projectId);
-//        if(StringUtils.isNotEmpty(url)){
-//            criteria.andPathEqualTo(url);
-//        }
-//        return  apiDefinitionMapper.selectByExample(example);
-//    }
+    public List<ApiDefinitionWithBLOBs> preparedUrl(String projectId, String method, String baseUrlSuffix) {
 
-    public List<ApiDefinitionWithBLOBs> preparedUrl(String projectId, String method, String urlSuffix) {
-
-        if (StringUtils.isEmpty(urlSuffix)) {
+        if (StringUtils.isEmpty(baseUrlSuffix)) {
             return new ArrayList<>();
         } else {
             ApiDefinitionExample example = new ApiDefinitionExample();
@@ -1654,6 +1668,7 @@ public class ApiDefinitionService {
 
             List<String> apiIdList = new ArrayList<>();
             boolean urlSuffixEndEmpty = false;
+            String urlSuffix = baseUrlSuffix;
             if (urlSuffix.endsWith("/")) {
                 urlSuffixEndEmpty = true;
                 urlSuffix = urlSuffix + "testMock";
@@ -1663,29 +1678,33 @@ public class ApiDefinitionService {
                 urlParams[urlParams.length - 1] = "";
             }
             for (ApiDefinition api : apiList) {
-                String path = api.getPath();
-                if (StringUtils.isEmpty(path)) {
-                    continue;
-                }
-                if (path.startsWith("/")) {
-                    path = path.substring(1);
-                }
-                if (StringUtils.isNotEmpty(path)) {
-                    String[] pathArr = path.split("/");
-                    if (pathArr.length == urlParams.length) {
-                        boolean isFetch = true;
-                        for (int i = 0; i < urlParams.length; i++) {
-                            String pathItem = pathArr[i];
-                            if (!(pathItem.startsWith("{") && pathItem.endsWith("}"))) {
-                                if (!StringUtils.equals(pathArr[i], urlParams[i])) {
-                                    isFetch = false;
-                                    break;
+                if (StringUtils.equalsAny(api.getPath(), baseUrlSuffix, "/" + baseUrlSuffix)) {
+                    apiIdList.add(api.getId());
+                } else {
+                    String path = api.getPath();
+                    if (StringUtils.isEmpty(path)) {
+                        continue;
+                    }
+                    if (path.startsWith("/")) {
+                        path = path.substring(1);
+                    }
+                    if (StringUtils.isNotEmpty(path)) {
+                        String[] pathArr = path.split("/");
+                        if (pathArr.length == urlParams.length) {
+                            boolean isFetch = true;
+                            for (int i = 0; i < urlParams.length; i++) {
+                                String pathItem = pathArr[i];
+                                if (!(pathItem.startsWith("{") && pathItem.endsWith("}"))) {
+                                    if (!StringUtils.equals(pathArr[i], urlParams[i])) {
+                                        isFetch = false;
+                                        break;
+                                    }
                                 }
-                            }
 
-                        }
-                        if (isFetch) {
-                            apiIdList.add(api.getId());
+                            }
+                            if (isFetch) {
+                                apiIdList.add(api.getId());
+                            }
                         }
                     }
                 }
@@ -1811,10 +1830,18 @@ public class ApiDefinitionService {
         ApiDefinitionRequest request = new ApiDefinitionRequest();
         request.setId(id);
         List<ApiDefinitionResult> list = extApiDefinitionMapper.list(request);
+        ApiDefinitionResult result = null;
         if (CollectionUtils.isNotEmpty(list)) {
-            return list.get(0);
+            result = list.get(0);
+            this.checkApiAttachInfo(result);
         }
-        return null;
+        return result;
+    }
+
+    private void checkApiAttachInfo(ApiDefinitionResult result) {
+        if (StringUtils.equalsIgnoreCase("esb", result.getMethod())) {
+            esbApiParamService.handleApiEsbParams(result);
+        }
     }
 
 
@@ -1987,6 +2014,7 @@ public class ApiDefinitionService {
         try {
             for (int i = 0; i < apis.size(); i++) {
                 ApiDefinitionWithBLOBs api = apis.get(i);
+                String sourceId = api.getId();
                 api.setId(UUID.randomUUID().toString());
                 api.setName(ServiceUtils.getCopyName(api.getName()));
                 api.setModuleId(request.getModuleId());
@@ -1996,6 +2024,9 @@ public class ApiDefinitionService {
                 api.setCreateTime(System.currentTimeMillis());
                 api.setUpdateTime(System.currentTimeMillis());
                 api.setRefId(api.getId());
+                // 检查附件复制出附件
+                FileUtils.copyBodyFiles(sourceId, api.getId());
+
                 mapper.insert(api);
                 if (i % 50 == 0)
                     sqlSession.flushStatements();
@@ -2006,17 +2037,17 @@ public class ApiDefinitionService {
         }
     }
 
-    public ApiDefinitionResult getApiDefinitionResult(ApiDefinitionRequest request) {
-        List<ApiDefinitionResult> resList = extApiDefinitionMapper.list(request);
-        if(resList==null){
+    public ApiDefinition getApiDefinition(ApiDefinitionExample apiDefinitionExample) {
+        List<ApiDefinition> apiDefinitions = apiDefinitionMapper.selectByExample(apiDefinitionExample);
+        if (apiDefinitions == null || apiDefinitions.size() == 0) {
             return null;
         }
-        return resList.get(0);
+        return apiDefinitions.get(0);
     }
 
     public void initModulePathAndId(String projectId, ApiDefinitionWithBLOBs test) {
         ApiModuleExample example = new ApiModuleExample();
-        example.createCriteria().andProjectIdEqualTo(projectId).andProtocolEqualTo(test.getProtocol()).andNameEqualTo("未规划接口");
+        example.createCriteria().andProjectIdEqualTo(projectId).andProtocolEqualTo(test.getProtocol()).andNameEqualTo("未规划接口").andLevelEqualTo(1);
         List<ApiModule> modules = apiModuleMapper.selectByExample(example);
         if (CollectionUtils.isNotEmpty(modules)) {
             test.setModuleId(modules.get(0).getId());

@@ -249,14 +249,14 @@ export default {
       }
     },
     getProjectName(id) {
-      if (this.projectId !== id) {
+      if (id !== getCurrentProjectID()) {
         const project = this.projectList.find(p => p.id === id);
         return project ? project.name : "";
       }
 
     },
     clickResource(resource) {
-      let workspaceId;
+      let workspaceId = getCurrentWorkspaceId();
       let isTurnSpace = true
       if(resource.projectId!==getCurrentProjectID()){
         isTurnSpace = false;
@@ -264,11 +264,11 @@ export default {
           if (response.data) {
             workspaceId  = response.data.workspaceId;
             isTurnSpace = true;
-            this.gotoTurn(resource,workspaceId,isTurnSpace);
+            this.checkPermission(resource,workspaceId,isTurnSpace);
           }
         });
       }else {
-        this.gotoTurn(resource,workspaceId,isTurnSpace);
+        this.checkPermission(resource,workspaceId,isTurnSpace);
       }
 
     },
@@ -280,6 +280,16 @@ export default {
       if(isTurnSpace){
         window.open(automationData.href, '_blank');
       }
+    },
+    checkPermission(resource,workspaceId,isTurnSpace){
+      this.$get('/project/getOwnerProjectIds', res => {
+        const project = res.data.find(p => p === resource.projectId);
+        if(!project){
+          this.$warning(this.$t('commons.no_permission'));
+        }else{
+          this.gotoTurn(resource,workspaceId,isTurnSpace)
+        }
+      })
     }
 
   }

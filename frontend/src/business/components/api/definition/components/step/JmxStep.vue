@@ -1,5 +1,5 @@
 <template>
-  <div v-if="loaded">
+  <div>
     <p>
       <el-select v-model="preOperate" size="mini" class="ms-select-step" v-if="tabType === 'pre'">
         <el-option
@@ -30,13 +30,14 @@
              :filter-node-method="filterNode"
              @node-drag-end="allowDrag"
              draggable ref="generalSteps" class="ms-step-tree-cell">
-       <span class="custom-tree-node father" slot-scope="{node,data}" style="width: 100%">
+       <span class="custom-tree-node father" slot-scope="{node,data}" style="width: calc(100% - 20px);">
         <!--前置脚本-->
          <div v-if="tabType === 'pre'">
            <ms-jsr233-processor
              v-if="data.type==='JSR223PreProcessor'"
              @remove="remove"
              @copyRow="copyRow"
+             :protocol="protocol"
              :title="$t('api_test.definition.request.pre_script')"
              :jsr223-processor="data"
              color="#B8741A"
@@ -53,7 +54,8 @@
             color="#B8741A"
             background-color="#F9F1EA"/>
 
-           <ms-constant-timer :inner-step="true" :timer="data" :node="node" v-if="data.type ==='ConstantTimer'" @remove="remove"/>
+           <ms-constant-timer :inner-step="true" :timer="data" :node="node" v-if="data.type ==='ConstantTimer'"
+                              @remove="remove" @copyRow="copyRow"/>
 
          </div>
         <div v-if="tabType ==='post'">
@@ -62,6 +64,7 @@
             v-if="data.type ==='JSR223PostProcessor'"
             @copyRow="copyRow"
             @remove="remove"
+            :protocol="protocol"
             :is-read-only="false"
             :title="$t('api_test.definition.request.post_script')"
             :jsr223-processor="data"
@@ -82,7 +85,7 @@
           <!--提取规则-->
            <ms-api-extract
              :response="response"
-             :is-read-only="isReadOnly"
+             :is-read-only="data.disabled"
              :extract="data"
              @copyRow="copyRow"
              @remove="remove"
@@ -99,7 +102,7 @@
             :response="response"
             :request="request"
             :apiId="apiId"
-            :is-read-only="isReadOnly"
+            :is-read-only="data.disabled"
             :assertions="data"/>
          </div>
        </span>
@@ -150,14 +153,10 @@ export default {
     },
     isShowEnable: Boolean,
     jsonPathList: Array,
+    protocol: String,
     isReadOnly: {
       type: Boolean,
       default: false
-    }
-  },
-  watch: {
-    'request.body.typeChange'() {
-      this.showHide();
     }
   },
   data() {
@@ -174,7 +173,7 @@ export default {
         children: "hashTree"
       },
       preOperate: "script",
-      postOperate: "script",
+      postOperate: "extract",
       preOperates: [
         {id: 'script', name: this.$t('api_test.definition.request.pre_script')},
         {id: 'sql', name: this.$t('api_test.definition.request.pre_sql')},
@@ -257,25 +256,30 @@ export default {
       return false;
     },
     filter() {
-      let vars = [];
-      if (this.tabType === 'pre') {
-        vars = ["JSR223PreProcessor", "JDBCPreProcessor", "ConstantTimer"];
-      } else if (this.tabType === 'post') {
-        vars = ["JSR223PostProcessor", "JDBCPostProcessor", "Extract"];
-      } else {
-        vars = ["Assertions"];
-      }
       this.$nextTick(() => {
-        if (this.$refs.generalSteps && this.$refs.generalSteps.filter) {
-          this.$refs.generalSteps.filter(vars);
+        let vars = [];
+        if (this.tabType === 'pre') {
+          vars = ["JSR223PreProcessor", "JDBCPreProcessor", "ConstantTimer"];
+        } else if (this.tabType === 'post') {
+          vars = ["JSR223PostProcessor", "JDBCPostProcessor", "Extract"];
+        } else {
+          vars = ["Assertions"];
         }
+        this.$nextTick(() => {
+          if (this.$refs.generalSteps && this.$refs.generalSteps.filter) {
+            this.$refs.generalSteps.filter(vars);
+          }
+        });
+        this.sort();
       });
-      this.sort();
     },
     addPre() {
       let jsr223PreProcessor = createComponent("JSR223PreProcessor");
       if (!this.request.hashTree) {
         this.request.hashTree = [];
+      }
+      if (this.request.disabled) {
+        jsr223PreProcessor.label = 'SCENARIO-REF-STEP';
       }
       this.request.hashTree.push(jsr223PreProcessor);
       this.sort();
@@ -286,6 +290,9 @@ export default {
       if (!this.request.hashTree) {
         this.request.hashTree = [];
       }
+      if (this.request.disabled) {
+        jsr223PostProcessor.label = 'SCENARIO-REF-STEP';
+      }
       this.request.hashTree.push(jsr223PostProcessor);
       this.sort();
       this.reload();
@@ -295,6 +302,10 @@ export default {
       if (!this.request.hashTree) {
         this.request.hashTree = [];
       }
+      if (this.request.disabled) {
+        jdbcPreProcessor.label = 'SCENARIO-REF-STEP';
+      }
+      jdbcPreProcessor.active = false;
       this.request.hashTree.push(jdbcPreProcessor);
       this.sort();
       this.reload();
@@ -304,6 +315,10 @@ export default {
       if (!this.request.hashTree) {
         this.request.hashTree = [];
       }
+      if (this.request.disabled) {
+        jdbcPostProcessor.label = 'SCENARIO-REF-STEP';
+      }
+      jdbcPostProcessor.active = false;
       this.request.hashTree.push(jdbcPostProcessor);
       this.sort();
       this.reload();
@@ -312,6 +327,9 @@ export default {
       let constant = new ConstantTimer({delay: 1000});
       if (!this.request.hashTree) {
         this.request.hashTree = [];
+      }
+      if (this.request.disabled) {
+        constant.label = 'SCENARIO-REF-STEP';
       }
       this.request.hashTree.push(constant);
       this.sort();
@@ -322,6 +340,9 @@ export default {
       if (!this.request.hashTree) {
         this.request.hashTree = [];
       }
+      if (this.request.disabled) {
+        assertions.label = 'SCENARIO-REF-STEP';
+      }
       this.request.hashTree.push(assertions);
       this.sort();
       this.reload();
@@ -330,6 +351,9 @@ export default {
       let jsonPostProcessor = new Extract({id: getUUID()});
       if (!this.request.hashTree) {
         this.request.hashTree = [];
+      }
+      if (this.request.disabled) {
+        jsonPostProcessor.label = 'SCENARIO-REF-STEP';
       }
       this.request.hashTree.push(jsonPostProcessor);
       this.sort();
@@ -345,8 +369,9 @@ export default {
     copyRow(row) {
       let obj = JSON.parse(JSON.stringify(row));
       obj.id = getUUID();
+      obj.resourceId = getUUID();
       const index = this.request.hashTree.findIndex(d => d.id === row.id);
-      if (index !==-1) {
+      if (index !== -1) {
         this.request.hashTree.splice(index, 0, obj);
       } else {
         this.request.hashTree.push(obj);
@@ -378,12 +403,6 @@ export default {
       this.isReloadData = true
       this.$nextTick(() => {
         this.isReloadData = false
-      })
-    },
-    showHide() {
-      this.loaded = false
-      this.$nextTick(() => {
-        this.loaded = true
       })
     },
     init() {
@@ -439,7 +458,18 @@ export default {
           if (line[1] === '必填' || line[1] === 'Required' || line[1] === 'true') {
             required = true;
           }
-          keyValues.push(new KeyValue({name: line[0], required: required, value: line[2], description: line[3], type: "text", valid: false, file: false, encode: true, enable: true, contentType: "text/plain"}));
+          keyValues.push(new KeyValue({
+            name: line[0],
+            required: required,
+            value: line[2],
+            description: line[3],
+            type: "text",
+            valid: false,
+            file: false,
+            encode: true,
+            enable: true,
+            contentType: "text/plain"
+          }));
         })
         keyValues.forEach(item => {
           switch (this.activeName) {
@@ -566,12 +596,8 @@ export default {
 }
 
 .ms-select-step {
-  margin-left: 15px;
+  margin-left: 10px;
   margin-right: 10px;
   width: 200px;
-}
-
-.ms-assertions-button {
-  margin-left: 18px;
 }
 </style>

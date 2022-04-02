@@ -225,7 +225,6 @@ public class TestPlanReportService {
         }
         LoadCaseRequest loadCaseRequest = new LoadCaseRequest();
         loadCaseRequest.setTestPlanId(planId);
-        loadCaseRequest.setProjectId(projectID);
         List<TestPlanLoadCaseDTO> testPlanLoadCaseDTOList = extTestPlanLoadCaseMapper.selectTestPlanLoadCaseList(loadCaseRequest);
         for (TestPlanLoadCaseDTO dto : testPlanLoadCaseDTOList) {
             performanceIdMap.put(dto.getId(), dto.getLoadCaseId());
@@ -565,6 +564,12 @@ public class TestPlanReportService {
         if (reportDTO.getErrorReportScenarios() != null) {
             testPlanReportContentWithBLOBs.setErrorReportScenarios(JSONObject.toJSONString(reportDTO.getErrorReportScenarios()));
         }
+        if(reportDTO.getUnExecuteCases() != null){
+            testPlanReportContentWithBLOBs.setUnExecuteCases(JSONObject.toJSONString(reportDTO.getUnExecuteCases()));
+        }
+        if(reportDTO.getUnExecuteScenarios() != null){
+            testPlanReportContentWithBLOBs.setUnExecuteScenarios(JSONObject.toJSONString(reportDTO.getUnExecuteScenarios()));
+        }
 
         // 更新测试计划报告通过率字段 passRate
         TestPlanReportContentExample contentExample = new TestPlanReportContentExample();
@@ -671,7 +676,7 @@ public class TestPlanReportService {
         String successfulMailTemplate = "TestPlanSuccessfulNotification";
         String errfoMailTemplate = "TestPlanFailedNotification";
 
-        String testPlanShareUrl = shareInfoService.getTestPlanShareUrl(testPlanReport.getId());
+        String testPlanShareUrl = shareInfoService.getTestPlanShareUrl(testPlanReport.getId(), creator);
         paramMap.put("planShareUrl", baseSystemConfigDTO.getUrl() + "/sharePlanReport" + testPlanShareUrl);
 
         NoticeModel noticeModel = NoticeModel.builder()
@@ -912,6 +917,12 @@ public class TestPlanReportService {
         }
         if (StringUtils.isNotBlank(testPlanReportContent.getErrorReportScenarios())) {
             testPlanReportDTO.setErrorReportScenarios(JSONObject.parseArray(testPlanReportContent.getErrorReportScenarios(), TestPlanFailureScenarioDTO.class));
+        }
+        if (StringUtils.isNotBlank(testPlanReportContent.getUnExecuteCases())) {
+            testPlanReportDTO.setUnExecuteCases(JSONObject.parseArray(testPlanReportContent.getUnExecuteCases(), TestPlanFailureApiDTO.class));
+        }
+        if (StringUtils.isNotBlank(testPlanReportContent.getUnExecuteScenarios())) {
+            testPlanReportDTO.setUnExecuteScenarios(JSONObject.parseArray(testPlanReportContent.getUnExecuteScenarios(), TestPlanFailureScenarioDTO.class));
         }
         testPlanReportDTO.setId(reportId);
         TestPlanReport testPlanReport = testPlanReportMapper.selectByPrimaryKey(testPlanReportContent.getTestPlanReportId());

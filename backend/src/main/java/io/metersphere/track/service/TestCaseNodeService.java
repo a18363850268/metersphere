@@ -121,9 +121,9 @@ public class TestCaseNodeService extends NodeTreeService<TestCaseNodeDTO> {
 
     public TestCaseNode getDefaultNode(String projectId) {
         TestCaseNodeExample example = new TestCaseNodeExample();
-        example.createCriteria().andProjectIdEqualTo(projectId).andNameEqualTo("未规划用例").andParentIdIsNull();;
+        example.createCriteria().andProjectIdEqualTo(projectId).andNameEqualTo("未规划用例").andParentIdIsNull();
         List<TestCaseNode> list = testCaseNodeMapper.selectByExample(example);
-        if(CollectionUtils.isEmpty(list)){
+        if (CollectionUtils.isEmpty(list)) {
             NodeNumDTO record = new NodeNumDTO();
             record.setId(UUID.randomUUID().toString());
             record.setCreateUser(SessionUtils.getUserId());
@@ -434,7 +434,6 @@ public class TestCaseNodeService extends NodeTreeService<TestCaseNodeDTO> {
                         createNodeByPathIterator(itemIterator, "/" + rootNodeName, nodeTree,
                                 pathMap, projectId, 2);
                     }
-                    ;
                 }
             }
             if (!hasNode) {
@@ -691,11 +690,11 @@ public class TestCaseNodeService extends NodeTreeService<TestCaseNodeDTO> {
         TestCaseNode testCaseNode = testCaseNodeMapper.selectByPrimaryKey(moduleId);
         LinkedList<TestCaseNode> returnList = new LinkedList<>();
 
-        while (testCaseNode != null){
+        while (testCaseNode != null) {
             returnList.addFirst(testCaseNode);
-            if(testCaseNode.getParentId() == null){
+            if (testCaseNode.getParentId() == null) {
                 testCaseNode = null;
-            }else {
+            } else {
                 testCaseNode = testCaseNodeMapper.selectByPrimaryKey(testCaseNode.getParentId());
             }
         }

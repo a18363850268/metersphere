@@ -169,9 +169,10 @@ public class MsTCPSampler extends MsTestElement {
         HashTreeUtil hashTreeUtil = new HashTreeUtil();
 
         if (CollectionUtils.isNotEmpty(hashTree)) {
+            hashTree = ElementUtil.order(hashTree);
             EnvironmentConfig finalEnvConfig = envConfig;
             hashTree.forEach(el -> {
-                if (el instanceof MsAssertions) {
+                if (el instanceof MsAssertions && finalEnvConfig != null) {
                     //断言设置需要和全局断言、误报进行去重
                     el = hashTreeUtil.duplicateRegexInAssertions(finalEnvConfig.getAssertions(), (MsAssertions) el);
                 }
@@ -272,7 +273,14 @@ public class MsTCPSampler extends MsTestElement {
         tcpSampler.setProperty(TCPSampler.NODELAY, this.isNodelay());
         tcpSampler.setCloseConnection(String.valueOf(this.isCloseConnection()));
         tcpSampler.setSoLinger(this.getSoLinger());
-        tcpSampler.setEolByte(this.getEolByte());
+
+        if(StringUtils.equalsIgnoreCase("LengthPrefixedBinaryTCPClientImpl",this.classname)){
+            //LengthPrefixedBinaryTCPClientImpl取样器不可以设置eolByte
+            this.eolByte = null;
+        }else {
+            tcpSampler.setEolByte(this.getEolByte());
+        }
+
         if (StringUtils.isNotEmpty(this.timeout)) {
             tcpSampler.setTimeout(this.timeout);
         }
@@ -379,7 +387,9 @@ public class MsTCPSampler extends MsTestElement {
         configTestElement.setProperty(TCPSampler.NODELAY, this.isNodelay());
         configTestElement.setProperty(TCPSampler.CLOSE_CONNECTION, this.isCloseConnection());
         configTestElement.setProperty(TCPSampler.SO_LINGER, this.getSoLinger());
-        configTestElement.setProperty(TCPSampler.EOL_BYTE, this.getEolByte());
+        if(!StringUtils.equalsIgnoreCase("LengthPrefixedBinaryTCPClientImpl",this.classname)){
+            configTestElement.setProperty(TCPSampler.EOL_BYTE, this.getEolByte());
+        }
         configTestElement.setProperty(TCPSampler.SO_LINGER, this.getSoLinger());
         configTestElement.setProperty(ConfigTestElement.USERNAME, this.getUsername());
         configTestElement.setProperty(ConfigTestElement.PASSWORD, this.getPassword());

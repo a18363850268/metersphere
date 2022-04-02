@@ -12,7 +12,8 @@
           </el-form-item>
 
           <el-form-item :label="$t('test_track.module.module')" prop="apiScenarioModuleId">
-            <ms-select-tree size="small" :data="moduleOptions" :defaultKey="currentScenario.apiScenarioModuleId" @getValue="setModule" :obj="moduleObj" clearable checkStrictly/>
+            <ms-select-tree size="small" :data="moduleOptions" :defaultKey="currentScenario.apiScenarioModuleId"
+                            @getValue="setModule" :obj="moduleObj" clearable checkStrictly/>
           </el-form-item>
 
           <el-form-item :label="$t('commons.status')" prop="status">
@@ -65,12 +66,15 @@
       <div class="ms-debug-div" @click="showAll" ref="debugHeader">
         <el-row style="margin: 5px">
           <el-col :span="1" class="ms-col-one ms-font" v-show="scenarioDefinition.length > 1">
-            <el-tooltip :content="$t('test_track.case.batch_operate')" placement="top" effect="light" v-show="!isBatchProcess">
-              <font-awesome-icon class="ms-batch-btn" :icon="['fa', 'bars']" v-prevent-re-click @click="batchProcessing"/>
+            <el-tooltip :content="$t('test_track.case.batch_operate')" placement="top" effect="light"
+                        v-show="!isBatchProcess">
+              <font-awesome-icon class="ms-batch-btn" :icon="['fa', 'bars']" v-prevent-re-click
+                                 @click="batchProcessing"/>
             </el-tooltip>
             <el-checkbox v-show="isBatchProcess" v-model="isCheckedAll" @change="checkedAll"/>
             <el-tooltip :content="$t('commons.cancel')" placement="top" effect="light" v-show="isBatchProcess">
-              <font-awesome-icon class="ms-batch-btn" :icon="['fa', 'times']" v-prevent-re-click @click="cancelBatchProcessing"/>
+              <font-awesome-icon class="ms-batch-btn" :icon="['fa', 'times']" v-prevent-re-click
+                                 @click="cancelBatchProcessing"/>
             </el-tooltip>
           </el-col>
           <el-col :span="2" class="ms-col-one ms-font">
@@ -82,10 +86,13 @@
             ：{{ getVariableSize() }}
           </el-col>
           <el-col :span="2" class="ms-col-one ms-font">
-            <el-checkbox v-model="enableCookieShare"><span style="font-size: 13px;">{{ $t('api_test.scenario.share_cookie') }}</span></el-checkbox>
+            <el-checkbox v-model="enableCookieShare"><span
+              style="font-size: 13px;">{{ $t('api_test.scenario.share_cookie') }}</span></el-checkbox>
           </el-col>
           <el-col :span="3" class="ms-col-one ms-font">
-            <el-checkbox v-model="onSampleError"><span style="font-size: 13px;">{{ $t('commons.failure_continues') }}</span></el-checkbox>
+            <el-checkbox v-model="onSampleError"><span style="font-size: 13px;">{{
+                $t('commons.failure_continues')
+              }}</span></el-checkbox>
           </el-col>
 
           <el-col :span="13">
@@ -98,7 +105,9 @@
                          @showPopover="showPopover" :has-option-group="true"
                          ref="envPopover" class="ms-message-right"/>
             <el-tooltip v-if="!debugLoading" content="Ctrl + R" placement="top">
-              <el-dropdown split-button type="primary" @click="runDebug" class="ms-message-right" size="mini" @command="handleCommand" v-permission="['PROJECT_API_SCENARIO:READ+EDIT', 'PROJECT_API_SCENARIO:READ+CREATE']">
+              <el-dropdown split-button type="primary" @click="runDebug" class="ms-message-right" size="mini"
+                           @command="handleCommand"
+                           v-permission="['PROJECT_API_SCENARIO:READ+EDIT', 'PROJECT_API_SCENARIO:READ+CREATE']">
                 {{ $t('api_test.request.debug') }}
                 <el-dropdown-menu slot="dropdown">
                   <el-dropdown-item>{{ $t('api_test.automation.generate_report') }}</el-dropdown-item>
@@ -108,13 +117,14 @@
             <el-button size="mini" type="primary" v-else @click="stop">{{ $t('report.stop_btn') }}</el-button>
 
             <el-button id="inputDelay" type="primary" size="mini" v-prevent-re-click @click="editScenario"
-                       title="ctrl + s" v-permission="['PROJECT_API_SCENARIO:READ+EDIT', 'PROJECT_API_SCENARIO:READ+CREATE', 'PROJECT_API_SCENARIO:READ+COPY']">
+                       title="ctrl + s"
+                       v-permission="['PROJECT_API_SCENARIO:READ+EDIT', 'PROJECT_API_SCENARIO:READ+CREATE', 'PROJECT_API_SCENARIO:READ+COPY']">
               {{ $t('commons.save') }}
             </el-button>
 
             <el-tooltip class="item" effect="dark" :content="$t('commons.refresh')" placement="top-start">
               <el-button :disabled="scenarioDefinition.length < 1" size="mini" icon="el-icon-refresh"
-                         v-prevent-re-click @click="getApiScenario"></el-button>
+                         v-prevent-re-click @click="refreshApiScenario"></el-button>
             </el-tooltip>
             <!--操作按钮-->
             <el-link type="primary" @click.stop @click="showHistory" style="margin: 0px 5px">
@@ -122,12 +132,18 @@
             </el-link>
 
             <el-tooltip :content="$t('commons.follow')" placement="bottom" effect="dark" v-show="!showFollow">
-              <i class="el-icon-star-off" style="color: #783987; font-size: 22px; margin-right: 5px;cursor: pointer;position: relative; top: 3px; " @click="saveFollow"/>
+              <i class="el-icon-star-off"
+                 style="color: #783987; font-size: 22px; margin-right: 5px;cursor: pointer;position: relative; top: 3px; "
+                 @click="saveFollow"/>
             </el-tooltip>
             <el-tooltip :content="$t('commons.cancel')" placement="bottom" effect="dark" v-show="showFollow">
-              <i class="el-icon-star-on" style="color: #783987; font-size: 22px; margin-right: 5px;cursor: pointer;position: relative; top: 3px; " @click="saveFollow"/>
+              <i class="el-icon-star-on"
+                 style="color: #783987; font-size: 22px; margin-right: 5px;cursor: pointer;position: relative; top: 3px; "
+                 @click="saveFollow"/>
             </el-tooltip>
-            <el-link type="primary" style="margin-right: 5px" @click="openHis" v-show="path === '/api/automation/update'">{{ $t('operating_log.change_history') }}</el-link>
+            <el-link type="primary" style="margin-right: 5px" @click="openHis"
+                     v-show="path === '/api/automation/update'">{{ $t('operating_log.change_history') }}
+            </el-link>
             <!--  版本历史 -->
             <ms-version-history v-xpack
                                 ref="versionHistory"
@@ -161,28 +177,31 @@
               <!-- 场景步骤内容 -->
               <div ref="stepInfo">
                 <el-tree node-key="resourceId" :props="props" :data="scenarioDefinition" class="ms-tree"
-                         :default-expanded-keys="expandedNode"
                          :expand-on-click-node="false"
                          :allow-drop="allowDrop"
                          :empty-text="$t('api_test.scenario.step_info')"
                          highlight-current
                          :show-checkbox="isBatchProcess"
                          @check-change="chooseHeadsUp"
-                         @node-expand="nodeExpand"
-                         @node-collapse="nodeCollapse"
-                         @node-drag-end="allowDrag" @node-click="nodeClick" draggable ref="stepTree">
+                         @node-drag-end="allowDrag" @node-click="nodeClick" draggable ref="stepTree" :key="reloadTree">
 
-                  <el-row class="custom-tree-node" :gutter="18" type="flex" align="middle" slot-scope="{node, data}" style="width: 100%">
-                    <el-col class="custom-tree-node-col" style="padding-left:0px;padding-right:0px" v-show="node && data.hashTree && data.hashTree.length > 0 && !data.isLeaf">
-                      <span v-show="!node.expanded" class="el-icon-circle-plus-outline custom-node_e" @click="openOrClose(node)"/>
-                      <span v-show="node.expanded" class="el-icon-remove-outline custom-node_e" @click="openOrClose(node)"/>
-                    </el-col>
+                  <el-row class="custom-tree-node" :gutter="10" type="flex" align="middle" slot-scope="{node, data}"
+                          style="width: 100%">
+                    <span class="custom-tree-node-col" style="padding-left:0px;padding-right:0px"
+                          v-show="node && data.hashTree && data.hashTree.length > 0 && !data.isLeaf">
+                      <span v-show="!node.expanded" class="el-icon-circle-plus-outline custom-node_e"
+                            @click="openOrClose(node)"/>
+                      <span v-show="node.expanded" class="el-icon-remove-outline custom-node_e"
+                            @click="openOrClose(node)"/>
+                    </span>
                     <!-- 批量操作 -->
-                    <el-col :class="data.checkBox? 'custom-tree-node-hide' : 'custom-tree-node-col'" style="padding-left: 0px; padding-right: 0px;"
-                            v-show="(data.hashTree && data.hashTree.length === 0 )|| data.isLeaf">
-                      <show-more-btn :is-show="node.checked" :buttons="batchOperators" :size="selectDataCounts" v-show="data.checkBox" style="margin-right: 3px"/>
-                    </el-col>
-                    <el-col>
+                    <span :class="data.checkBox? 'custom-tree-node-hide' : 'custom-tree-node-col'"
+                          style="padding-left: 0px; padding-right: 0px;"
+                          v-show="(data.hashTree && data.hashTree.length === 0 )|| data.isLeaf">
+                      <show-more-btn :is-show="node.checked" :buttons="batchOperators" :size="selectDataCounts"
+                                     v-show="data.checkBox" style="margin-right: 10px"/>
+                    </span>
+                    <span style="width: calc(100% - 40px);">
                       <!-- 步骤组件-->
                       <ms-component-config
                         :scenario-definition="scenarioDefinition"
@@ -191,7 +210,6 @@
                         :scenario="data"
                         :response="response"
                         :currentScenario="currentScenario"
-                        :expandedNode="expandedNode"
                         :currentEnvironmentId="currentEnvironmentId"
                         :node="node"
                         :project-list="projectList"
@@ -213,14 +231,15 @@
                       <div v-else class="el-tree-node is-hidden is-focusable is-leaf" style="display: none;">
                         {{ hideNode(node) }}
                       </div>
-                    </el-col>
+                    </span>
                   </el-row>
                 </el-tree>
               </div>
             </el-col>
             <!-- 按钮列表 -->
             <el-col :span="3">
-              <div @click="fabClick" v-permission="['PROJECT_API_SCENARIO:READ+EDIT', 'PROJECT_API_SCENARIO:READ+CREATE']">
+              <div @click="fabClick"
+                   v-permission="['PROJECT_API_SCENARIO:READ+EDIT', 'PROJECT_API_SCENARIO:READ+CREATE']">
                 <vue-fab id="fab" mainBtnColor="#783887" size="small" :global-options="globalOptions"
                          :click-auto-close="false" v-outside-click="outsideClick" ref="refFab">
                   <fab-item
@@ -247,7 +266,8 @@
                                  :scenario-definition="scenarioDefinition"/>
 
         <!--接口列表-->
-        <scenario-api-relevance @save="pushApiOrCase" @close="setHideBtn" ref="scenarioApiRelevance" :is-across-space="true" v-if="type!=='detail'"/>
+        <scenario-api-relevance @save="pushApiOrCase" @close="setHideBtn" ref="scenarioApiRelevance"
+                                :is-across-space="true" v-if="type!=='detail'"/>
 
         <!--自定义接口-->
         <el-drawer v-if="type!=='detail'" :visible.sync="customizeVisible" :destroy-on-close="true" direction="ltr"
@@ -256,19 +276,22 @@
           <ms-api-customize :request="customizeRequest" @addCustomizeApi="addCustomizeApi"/>
         </el-drawer>
         <!--场景导入 -->
-        <scenario-relevance v-if="type!=='detail'" @save="addScenario" @close="setHideBtn" :is-across-space="true" ref="scenarioRelevance"/>
+        <scenario-relevance v-if="type!=='detail'" @save="addScenario" @close="setHideBtn" :is-across-space="true"
+                            ref="scenarioRelevance"/>
 
         <!-- 环境 -->
         <api-environment-config v-if="type!=='detail'" ref="environmentConfig" @close="environmentConfigClose"/>
 
         <!--执行组件-->
         <ms-run :debug="true" v-if="type!=='detail'" :environment="projectEnvMap" :reportId="reportId" :saved="saved"
-                :run-data="debugData" :environment-type="environmentType" :environment-group-id="envGroupId" :executeType="executeType"
+                :run-data="debugData" :environment-type="environmentType" :environment-group-id="envGroupId"
+                :executeType="executeType"
                 @runRefresh="runRefresh" @errorRefresh="errorRefresh" ref="runTest"/>
         <!-- 调试结果 -->
         <el-drawer v-if="type!=='detail'" :visible.sync="debugVisible" :destroy-on-close="true" direction="ltr"
                    :withHeader="true" :modal="false" size="90%">
-          <ms-api-report-detail :scenario="currentScenario" :report-id="reportId" :debug="true" :currentProjectId="projectId" @refresh="detailRefresh"/>
+          <ms-api-report-detail :scenario="currentScenario" :report-id="reportId" :debug="true"
+                                :currentProjectId="projectId" @refresh="detailRefresh"/>
         </el-drawer>
 
         <!--场景公共参数-->
@@ -278,7 +301,8 @@
         <api-import v-if="type!=='detail'" ref="apiImport" :saved="false" @refresh="apiImport"/>
 
         <!--步骤最大化-->
-        <ms-drawer :visible="drawer" :size="100" @close="close" direction="default" :show-full-screen="false" :is-show-close="false" style="overflow: hidden" v-if="drawer">
+        <ms-drawer :visible="drawer" :size="100" @close="close" direction="default" :show-full-screen="false"
+                   :is-show-close="false" style="overflow: hidden" v-if="drawer">
           <maximize-scenario
             :scenario-definition="scenarioDefinition"
             :projectIds.sync="projectIds"
@@ -454,7 +478,6 @@ export default {
       operatingElements: [],
       selectedTreeNode: undefined,
       selectedNode: undefined,
-      expandedNode: [],
       scenarioDefinition: [],
       path: "/api/automation/create",
       debugData: {},
@@ -533,11 +556,15 @@ export default {
           permissions: ['PROJECT_API_SCENARIO:READ+DELETE']
         },
       ],
+      reloadTree: "",
     }
   },
   created() {
     if (!this.currentScenario.apiScenarioModuleId) {
       this.currentScenario.apiScenarioModuleId = "";
+    }
+    if (this.currentScenario.apiScenarioModuleId === 'default-module') {
+      this.currentScenario.apiScenarioModuleId = this.moduleOptions[0].id;
     }
     this.debug = false;
     this.debugLoading = false;
@@ -560,9 +587,6 @@ export default {
     this.$nextTick(() => {
       this.addListener();
     });
-    if (!this.currentScenario.name && this.$refs.refFab) {
-      this.$refs.refFab.openMenu();
-    }
   },
   directives: {OutsideClick},
   computed: {
@@ -574,6 +598,17 @@ export default {
     }
   },
   methods: {
+    refreshApiScenario() {
+      this.getApiScenario(true);
+    },
+    recursiveSorting(arr) {
+      for (let i in arr) {
+        arr[i].disabled = true;
+        if (arr[i].hashTree != undefined && arr[i].hashTree.length > 0) {
+          this.recursiveSorting(arr[i].hashTree);
+        }
+      }
+    },
     chooseHeadsUp() {
       if (this.$refs.stepTree) {
         this.selectDataCounts = this.$refs.stepTree.getCheckedNodes().length;
@@ -581,30 +616,35 @@ export default {
     },
     checkedAll(v) {
       if (this.$refs.stepTree && this.$refs.stepTree.root && this.$refs.stepTree.root.childNodes) {
-        this.stepCheckedAll(v, this.$refs.stepTree.root.childNodes);
+        this.recursionChecked(v, this.$refs.stepTree.root.childNodes);
       }
     },
-    stepCheckedAll(v, array) {
+    recursionChecked(v, array) {
       if (array) {
         array.forEach(item => {
           if (item.childNodes && item.childNodes.length > 0) {
-            this.stepCheckedAll(v, item.childNodes);
+            this.recursionChecked(v, item.childNodes);
           }
           item.checked = v;
+          if (item.data && item.data.type === 'scenario' && item.data.referenced === 'REF') {
+            item.expanded = false;
+          }
         })
       }
     },
     batchProcessing() {
       this.isBatchProcess = true;
-      this.expandedNode = [];
       this.hideAllTreeNode(this.scenarioDefinition);
+      if (this.$refs.stepTree && this.$refs.stepTree.root && this.$refs.stepTree.root.childNodes) {
+        this.recursionExpansion([], this.$refs.stepTree.root.childNodes);
+      }
       this.reloadTreeStatus();
     },
     cancelBatchProcessing() {
       this.isBatchProcess = false;
       this.isCheckedAll = false;
       if (this.$refs.stepTree && this.$refs.stepTree.root && this.$refs.stepTree.root.childNodes) {
-        this.stepCheckedAll(false, this.$refs.stepTree.root.childNodes);
+        this.recursionChecked(false, this.$refs.stepTree.root.childNodes);
       }
       this.selectDataCounts = 0;
       this.commandTreeNode();
@@ -621,11 +661,6 @@ export default {
     },
     openOrClose(node) {
       node.expanded = !node.expanded;
-      if (node.expanded) {
-        this.nodeExpand(node.data);
-      } else {
-        this.nodeCollapse(node.data);
-      }
     },
     hideNode(node) {
       node.isLeaf = true;
@@ -633,12 +668,12 @@ export default {
     },
     hideAllTreeNode(array) {
       array.forEach(item => {
-        if (item.hashTree && item.hashTree.length > 0) {
-          this.hideAllTreeNode(item.hashTree);
-        }
         item.isLeaf = this.isBatchProcess;
         item.isBatchProcess = this.isBatchProcess;
         item.checkBox = this.isBatchProcess;
+        if (item.hashTree && item.hashTree.length > 0) {
+          this.hideAllTreeNode(item.hashTree);
+        }
       })
     },
     commandTreeNode(node, array) {
@@ -653,6 +688,8 @@ export default {
         }
         if (item.hashTree && item.hashTree.length > 0) {
           this.commandTreeNode(item, item.hashTree);
+        } else {
+          item.isLeaf = true;
         }
       })
       if (node) {
@@ -692,17 +729,35 @@ export default {
             let data = JSON.parse(res.data);
             if (data.hashTree) {
               this.sort(data.hashTree);
-              Object.assign(this.scenarioDefinition, data.hashTree)
+              let domainMap = new Map();
+              this.getEnvDomain(data.hashTree, domainMap);
+              this.margeDomain(this.scenarioDefinition, domainMap);
               this.cancelBatchProcessing();
-              if (this.$store.state.currentApiCase) {
-                this.$store.state.currentApiCase.resetDataSource = getUUID();
-              } else {
-                this.$store.state.currentApiCase = {resetDataSource: getUUID()};
-              }
             }
           }
         })
       }
+    },
+    margeDomain(array, map) {
+      array.forEach(item => {
+        if (item && map.has(item.resourceId)) {
+          item.domain = map.get(item.resourceId);
+          item.resourceId = getUUID();
+        }
+        if (item && item.hashTree && item.hashTree.length > 0) {
+          this.margeDomain(item.hashTree, map);
+        }
+      })
+    },
+    getEnvDomain(array, map) {
+      array.forEach(item => {
+        if (item && item.resourceId && item.domain) {
+          map.set(item.resourceId, item.domain);
+        }
+        if (item && item.hashTree && item.hashTree.length > 0) {
+          this.getEnvDomain(item.hashTree, map);
+        }
+      })
     },
     initPlugins() {
       if (this.plugins) {
@@ -720,6 +775,11 @@ export default {
           if (this.operatingElements && this.operatingElements.includes(item.jmeterClazz)) {
             this.buttonData.push(plugin);
           }
+          this.$nextTick(() => {
+            if (!this.currentScenario.name && this.$refs.refFab) {
+              this.$refs.refFab.openMenu();
+            }
+          });
         });
       }
     },
@@ -746,25 +806,25 @@ export default {
     },
     stop() {
       if (this.reportId) {
+        this.debugLoading = false;
+        try {
+          if (this.messageWebSocket) {
+            this.messageWebSocket.close();
+          }
+          if (this.websocket) {
+            this.websocket.close();
+          }
+          this.clearNodeStatus(this.$refs.stepTree.root.childNodes);
+          this.clearDebug();
+          this.$success(this.$t('report.test_stop_success'));
+        } catch (e) {
+          this.debugLoading = false;
+        }
+        this.runScenario = undefined;
+        // 停止jmeter执行
         let url = "/api/automation/stop/" + this.reportId;
         this.$get(url, response => {
-          this.debugLoading = false;
-          try {
-            if (this.websocket) {
-              this.websocket.close();
-            }
-            if (this.messageWebSocket) {
-              this.messageWebSocket.close();
-            }
-            this.clearNodeStatus(this.$refs.stepTree.root.childNodes);
-            this.clearDebug();
-            this.$success(this.$t('report.test_stop_success'));
-            this.forceRerender();
-          } catch (e) {
-            this.debugLoading = false;
-          }
         });
-        this.runScenario = undefined;
       }
     },
     clearDebug() {
@@ -952,18 +1012,18 @@ export default {
       }
       /*触发执行操作*/
       this.$refs['currentScenario'].validate(async (valid) => {
-        if (valid) {
-          this.debugLoading = true;
-          let definition = JSON.parse(JSON.stringify(this.currentScenario));
-          definition.hashTree = this.scenarioDefinition;
-          await this.getEnv(JSON.stringify(definition));
-          await this.$refs.envPopover.initEnv();
-          const sign = await this.$refs.envPopover.checkEnv(this.isFullUrl);
-          if (!sign) {
-            this.debugLoading = false;
-            return;
-          }
-          this.editScenario().then(() => {
+          if (valid) {
+            this.debugLoading = true;
+            let definition = JSON.parse(JSON.stringify(this.currentScenario));
+            definition.hashTree = this.scenarioDefinition;
+            await this.getEnv(JSON.stringify(definition));
+            await this.$refs.envPopover.initEnv();
+            const sign = await this.$refs.envPopover.checkEnv(this.isFullUrl);
+            if (!sign) {
+              this.debugLoading = false;
+              return;
+            }
+            this.initParameter();
             this.debugData = {
               id: this.currentScenario.id,
               name: this.currentScenario.name,
@@ -979,9 +1039,10 @@ export default {
             this.reportId = getUUID().substring(0, 8);
             this.debugLoading = false;
             this.pluginDelStep = false;
-          })
+            this.$emit('refresh');
+          }
         }
-      })
+      )
     },
     validatePluginData(steps) {
       steps.forEach(step => {
@@ -1087,6 +1148,9 @@ export default {
       this.$store.state.selectStep = data;
       this.buttonData = buttons(this);
       this.initPlugins();
+      if (this.buttonData.length === 0 && this.$refs.refFab && this.$refs.refFab.active) {
+        this.$refs.refFab.openMenu();
+      }
     },
     suggestClick(node) {
       this.response = {};
@@ -1211,6 +1275,9 @@ export default {
       }
       if (!request.hashTree) {
         request.hashTree = [];
+      }
+      if (referenced === 'REF' && request.hashTree) {
+        this.recursiveSorting(request.hashTree);
       }
       if (this.selectedTreeNode !== undefined) {
         this.selectedTreeNode.hashTree.push(request);
@@ -1412,16 +1479,7 @@ export default {
       if (dropNode && draggingNode && dropType) {
         this.sort();
         this.forceRerender();
-      }
-    },
-    nodeExpand(data, node) {
-      if (data && data.resourceId && this.expandedNode.indexOf(data.resourceId) === -1) {
-        this.expandedNode.push(data.resourceId);
-      }
-    },
-    nodeCollapse(data, node) {
-      if (data && data.resourceId) {
-        this.expandedNode.splice(this.expandedNode.indexOf(data.resourceId), 1);
+        this.cancelBatchProcessing();
       }
     },
     editScenario() {
@@ -1477,7 +1535,7 @@ export default {
         })
       });
     },
-    getApiScenario() {
+    getApiScenario(isRefresh) {
       this.loading = true;
       this.isBatchProcess = false;
       this.stepEnable = true;
@@ -1510,6 +1568,7 @@ export default {
                   // 兼容历史数据
                   this.projectEnvMap.set(this.projectId, obj.environmentId);
                 }
+                this.$store.state.scenarioEnvMap = this.projectEnvMap;
                 this.envGroupId = response.data.environmentGroupId;
                 if (response.data.environmentType) {
                   this.environmentType = response.data.environmentType;
@@ -1517,6 +1576,21 @@ export default {
                 this.currentScenario.variables = [];
                 if (obj.headers) {
                   this.currentScenario.headers = obj.headers;
+                }
+                let index = 1;
+                if (obj.variables) {
+                  obj.variables.forEach(item => {
+                    // 兼容历史数据
+                    if (item.name) {
+                      if (!item.type) {
+                        item.type = "CONSTANT";
+                        item.id = getUUID();
+                      }
+                      item.num = index;
+                      this.currentScenario.variables.push(item);
+                      index++;
+                    }
+                  })
                 }
                 this.enableCookieShare = obj.enableCookieShare;
                 if (obj.onSampleError === undefined) {
@@ -1542,10 +1616,13 @@ export default {
             });
           }
           this.loading = false;
-          // 初始化resourceId
-          if (this.scenarioDefinition) {
-            this.resetResourceId(this.scenarioDefinition);
-          }
+          this.sort();
+          this.$nextTick(() => {
+            this.cancelBatchProcessing();
+            if (isRefresh) {
+              this.reloadTree = getUUID();
+            }
+          });
           // 记录初始化数据
           let v1 = {
             apiScenarioModuleId: this.currentScenario.apiScenarioModuleId,
@@ -1560,10 +1637,6 @@ export default {
 
           this.currentScenario.scenarioDefinitionOrg = v1;
           this.currentScenario.scenarioDefinition = this.scenarioDefinition;
-          this.$nextTick(() => {
-            this.sort();
-            this.cancelBatchProcessing();
-          });
         })
       }
     },
@@ -1574,7 +1647,10 @@ export default {
             stepArray[i].hashTree = [];
           }
           if (stepArray[i].type === "Assertions" && !stepArray[i].document) {
-            stepArray[i].document = {type: "JSON", data: {xmlFollowAPI: false, jsonFollowAPI: false, json: [], xml: []}};
+            stepArray[i].document = {
+              type: "JSON",
+              data: {xmlFollowAPI: false, jsonFollowAPI: false, json: [], xml: []}
+            };
           }
           if (stepArray[i].hashTree.length > 0) {
             this.dataProcessing(stepArray[i].hashTree);
@@ -1596,7 +1672,7 @@ export default {
         }
       }
     },
-    async setParameter() {
+    initParameter() {
       this.currentScenario.stepTotal = this.scenarioDefinition.length;
       if (!this.currentScenario.projectId) {
         this.currentScenario.projectId = this.projectId;
@@ -1621,11 +1697,6 @@ export default {
         this.formatData(scenario.hashTree);
       }
       this.currentScenario.environmentType = this.environmentType;
-      let definition = JSON.parse(JSON.stringify(this.currentScenario));
-      definition.hashTree = this.scenarioDefinition;
-      await this.getEnv(JSON.stringify(definition));
-      // 保存时同步所需要的项目环境
-      savePreciseEnvProjectIds(this.projectIds, this.projectEnvMap);
       this.currentScenario.environmentJson = JSON.stringify(strMapToObj(this.projectEnvMap));
       this.currentScenario.environmentGroupId = this.envGroupId;
       this.currentScenario.scenarioDefinition = scenario;
@@ -1636,6 +1707,14 @@ export default {
         this.currentScenario.modulePath = this.currentModule.method !== undefined ? this.currentModule.method : null;
         this.currentScenario.apiScenarioModuleId = this.currentModule.id;
       }
+    },
+    async setParameter() {
+      this.initParameter();
+      let definition = JSON.parse(JSON.stringify(this.currentScenario));
+      definition.hashTree = this.scenarioDefinition;
+      await this.getEnv(JSON.stringify(definition));
+      // 保存时同步所需要的项目环境
+      savePreciseEnvProjectIds(this.projectIds, this.projectEnvMap);
     },
     runRefresh() {
       if (!this.debug) {
@@ -1654,6 +1733,7 @@ export default {
       this.runScenario = undefined;
       this.message = "stop";
       this.clearMessage = getUUID().substring(0, 8);
+      this.debugData = {};
     },
     showScenarioParameters() {
       this.$refs.scenarioParameters.open(this.currentScenario.variables, this.currentScenario.headers);
@@ -1682,6 +1762,7 @@ export default {
     },
     setProjectEnvMap(projectEnvMap) {
       this.projectEnvMap = projectEnvMap;
+      this.$store.state.scenarioEnvMap = projectEnvMap;
       this.setDomain(true);
     },
     setEnvGroup(id) {
@@ -1701,6 +1782,7 @@ export default {
     },
     detailRefresh(result) {
       // 把执行结果分发给各个请求
+      this.debugData = {};
     },
     fullScreen() {
       this.drawer = true;
@@ -1723,44 +1805,66 @@ export default {
     },
     changeNodeStatus(resourceIds, nodes) {
       for (let i in nodes) {
-        if (nodes[i]) {
+        if (nodes[i] && !(nodes[i].type === 'scenario' && nodes[i].referenced === 'REF')) {
           if (resourceIds.indexOf(nodes[i].resourceId) !== -1) {
-            if (this.expandedStatus) {
-              this.expandedNode.push(nodes[i].resourceId);
-            }
             nodes[i].active = this.expandedStatus;
-            if (this.stepSize > 35 && this.expandedStatus) {
-              nodes[i].active = false;
-            }
           }
-          if (nodes[i].hashTree != undefined && nodes[i].hashTree.length > 0) {
-            this.changeNodeStatus(nodes[i].hashTree);
+          if (nodes[i].hashTree && nodes[i].hashTree.length > 0 && !this.expandedStatus) {
+            this.changeNodeStatus(resourceIds, nodes[i].hashTree);
           }
         }
       }
     },
     getAllResourceIds() {
-      let selectValueArr = [];
       if (this.$refs.stepTree) {
-        let checkNodes = this.$refs.stepTree.getCheckedNodes();
-        for (let node of checkNodes) {
-          selectValueArr.push(node.resourceId);
+        return this.$refs.stepTree.getCheckedKeys();
+      }
+      return [];
+    },
+    checkALevelChecked() {
+      if (this.$refs.stepTree) {
+        let resourceIds = [];
+        this.$refs.stepTree.root.childNodes.forEach(item => {
+          if (item.checked) {
+            resourceIds.push(item.data.resourceId);
+          }
+        })
+        if (resourceIds.length > 20) {
+          this.$warning(this.$t('api_test.automation.open_check_message'));
+          return false;
         }
       }
-      return selectValueArr;
+      return true;
+    },
+    recursionExpansion(resourceIds, array) {
+      if (array) {
+        array.forEach(item => {
+          if (item.data && item.data.type === 'scenario' && item.data.referenced === 'REF') {
+            item.expanded = false;
+          } else {
+            if (resourceIds.indexOf(item.data.resourceId) !== -1) {
+              item.expanded = this.expandedStatus;
+            }
+          }
+          if (item.childNodes && item.childNodes.length > 0) {
+            this.recursionExpansion(resourceIds, item.childNodes);
+          }
+        })
+      }
     },
     openExpansion() {
-      this.expandedNode = [];
       this.expandedStatus = true;
-      let resourceIds = this.getAllResourceIds();
-      this.changeNodeStatus(resourceIds, this.scenarioDefinition);
+      if (this.checkALevelChecked()) {
+        let resourceIds = this.getAllResourceIds();
+        this.changeNodeStatus(resourceIds, this.scenarioDefinition);
+        this.recursionExpansion(resourceIds, this.$refs.stepTree.root.childNodes);
+      }
     },
     closeExpansion() {
       this.expandedStatus = false;
-      this.expandedNode = [];
       let resourceIds = this.getAllResourceIds();
       this.changeNodeStatus(resourceIds, this.scenarioDefinition);
-      this.forceRerender();
+      this.recursionExpansion(resourceIds, this.$refs.stepTree.root.childNodes);
     },
     stepStatus(resourceIds, nodes) {
       for (let i in nodes) {
@@ -1769,7 +1873,7 @@ export default {
             nodes[i].enable = this.stepEnable;
           }
           if (nodes[i].hashTree != undefined && nodes[i].hashTree.length > 0) {
-            this.stepStatus(nodes[i].hashTree);
+            this.stepStatus(resourceIds, nodes[i].hashTree);
           }
         }
       }
@@ -1913,26 +2017,10 @@ export default {
   width: 100%;
 }
 
-.ms-main-div {
-  background-color: white;
-}
-
 .ms-debug-div {
   border: 1px #DCDFE6 solid;
   border-radius: 4px;
   margin-right: 0px;
-}
-
-.ms-scenario-button {
-  margin-left: 20px;
-  padding: 7px;
-}
-
-.ms-api-col {
-  background-color: #7C3985;
-  border-color: #7C3985;
-  margin-right: 10px;
-  color: white;
 }
 
 .ms-font {
@@ -1995,12 +2083,6 @@ export default {
   font-size: 13px;
 }
 
-.ms-opt-btn {
-  position: fixed;
-  right: 50px;
-  z-index: 9;
-}
-
 .ms-tree >>> .el-tree-node__expand-icon.expanded {
   -webkit-transform: rotate(0deg);
   transform: rotate(0deg);
@@ -2011,7 +2093,6 @@ export default {
 }
 
 .ms-tree >>> .el-icon-caret-right:before {
-  /*content: '\e723';*/
   padding: 0;
   content: "";
 }
@@ -2047,34 +2128,6 @@ export default {
   cursor: pointer;
 }
 
-.el-icon-more:hover {
-  color: #7C3985;
-  cursor: pointer;
-}
-
-.scenario-name {
-  display: inline-block;
-  margin: 0 5px;
-  overflow-x: hidden;
-  padding-bottom: 0;
-  text-overflow: ellipsis;
-  vertical-align: middle;
-  white-space: nowrap;
-  width: 150px;
-}
-
-.ms-open-btn {
-  margin: 5px 5px 0px;
-  color: #6D317C;
-  font-size: 20px;
-}
-
-.ms-open-btn:hover {
-  background-color: #F2F9EE;
-  cursor: pointer;
-  color: #67C23A;
-}
-
 .ms-batch-btn {
   margin-left: 5px;
 }
@@ -2090,20 +2143,8 @@ export default {
   float: right;
 }
 
-.ms-open-btn-left {
-  margin-left: 35px;
-}
-
-
 .ms-message-right {
   margin-right: 10px;
-}
-
-.is-top {
-  position: fixed;
-  top: 125px;
-  background: white;
-  z-index: 999;
 }
 
 .custom-node_e {
@@ -2112,14 +2153,14 @@ export default {
 }
 
 .custom-tree-node-col {
-  width: 20px;
+  width: 25px;
   padding: 0px;
   margin-left: 5px;
   vertical-align: center;
 }
 
 .custom-tree-node-hide {
-  width: 2px;
+  width: 15px;
   padding: 0px;
   vertical-align: center;
 }

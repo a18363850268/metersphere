@@ -21,10 +21,8 @@ import io.metersphere.api.dto.scenario.environment.EnvironmentConfig;
 import io.metersphere.api.dto.ssl.KeyStoreConfig;
 import io.metersphere.api.dto.ssl.KeyStoreFile;
 import io.metersphere.api.dto.ssl.MsKeyStore;
-import io.metersphere.api.service.ApiDefinitionService;
 import io.metersphere.api.service.ApiTestCaseService;
 import io.metersphere.api.service.CommandService;
-import io.metersphere.base.domain.ApiDefinitionWithBLOBs;
 import io.metersphere.base.domain.ApiTestCaseWithBLOBs;
 import io.metersphere.commons.constants.MsTestElementConstants;
 import io.metersphere.commons.exception.MSException;
@@ -57,6 +55,7 @@ import java.net.URLEncoder;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -189,12 +188,19 @@ public class MsHTTPSamplerProxy extends MsTestElement {
         if (this.body != null) {
             List<KeyValue> bodyParams = this.body.getBodyParams(sampler, this.getId());
             if (StringUtils.isNotEmpty(this.body.getType()) && "Form Data".equals(this.body.getType())) {
-                sampler.setDoMultipart(true);
+                AtomicBoolean kvIsEmpty = new AtomicBoolean(true);
                 this.body.getKvs().forEach(files -> {
                     if (StringUtils.isNotEmpty(files.getName()) && "file".equals(files.getType()) && CollectionUtils.isNotEmpty(files.getFiles())) {
                         sampler.setDoBrowserCompatibleMultipart(true);
                     }
+                    if (StringUtils.isNotEmpty(files.getName())) {
+                        kvIsEmpty.set(false);
+                    }
                 });
+                //值不为空时才会设置doMultiPart
+                if (!kvIsEmpty.get()) {
+                    sampler.setDoMultipart(true);
+                }
             }
             if (CollectionUtils.isNotEmpty(bodyParams)) {
                 Arguments arguments = httpArguments(bodyParams);
@@ -255,6 +261,7 @@ public class MsHTTPSamplerProxy extends MsTestElement {
             }
         }
         if (CollectionUtils.isNotEmpty(hashTree)) {
+            hashTree = ElementUtil.order(hashTree);
             for (MsTestElement el : hashTree) {
                 if (el.getEnvironmentId() == null) {
                     if (this.getEnvironmentId() == null) {
@@ -275,13 +282,11 @@ public class MsHTTPSamplerProxy extends MsTestElement {
 
     private boolean setRefElement() {
         try {
-            ApiDefinitionService apiDefinitionService = CommonBeanFactory.getBean(ApiDefinitionService.class);
             ObjectMapper mapper = new ObjectMapper();
             mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
             MsHTTPSamplerProxy proxy = null;
             if (StringUtils.equals(this.getRefType(), "CASE")) {
-                ApiTestCaseService apiTestCaseService = CommonBeanFactory.getBean(ApiTestCaseService.class);
-                ApiTestCaseWithBLOBs bloBs = apiTestCaseService.get(this.getId());
+                ApiTestCaseWithBLOBs bloBs = CommonBeanFactory.getBean(ApiTestCaseService.class).get(this.getId());
                 if (bloBs != null) {
                     this.setProjectId(bloBs.getProjectId());
                     JSONObject element = JSON.parseObject(bloBs.getRequest());
@@ -289,14 +294,6 @@ public class MsHTTPSamplerProxy extends MsTestElement {
                     proxy = mapper.readValue(element.toJSONString(), new TypeReference<MsHTTPSamplerProxy>() {
                     });
                     this.setName(bloBs.getName());
-                }
-            } else {
-                ApiDefinitionWithBLOBs apiDefinition = apiDefinitionService.getBLOBs(this.getId());
-                if (apiDefinition != null) {
-                    this.setName(apiDefinition.getName());
-                    this.setProjectId(apiDefinition.getProjectId());
-                    proxy = mapper.readValue(apiDefinition.getRequest(), new TypeReference<MsHTTPSamplerProxy>() {
-                    });
                 }
             }
             if (proxy != null) {
@@ -457,12 +454,7 @@ public class MsHTTPSamplerProxy extends MsTestElement {
                     sampler.setProperty("HTTPSampler.path", envPath);
                 }
                 if (CollectionUtils.isNotEmpty(this.getArguments())) {
-                    String path = envPath;
-                    if (StringUtils.equalsIgnoreCase(this.getMethod(), "GET")) {
-                        getQueryParameters(sampler);
-                    } else {
-                        path = postQueryParameters(envPath);
-                    }
+                    String path = postQueryParameters(envPath);
                     if (HTTPConstants.DELETE.equals(this.getMethod()) && !path.startsWith("${")) {
                         if (!path.startsWith("/")) {
                             path = "/" + path;
@@ -633,7 +625,7 @@ public class MsHTTPSamplerProxy extends MsTestElement {
             });
         }
         try {
-            Pattern p = Pattern.compile("(\\{)([\\w-]+)(\\})");
+            Pattern p = Pattern.compile("(\\{)([\\w]+)(\\})");
             Matcher m = p.matcher(path);
             while (m.find()) {
                 String group = m.group(2);
@@ -683,22 +675,28 @@ public class MsHTTPSamplerProxy extends MsTestElement {
         list.stream().
                 filter(KeyValue::isValid).
                 filter(KeyValue::isEnable).forEach(keyValue -> {
-                            try {
-                                String value = StringUtils.isNotEmpty(keyValue.getValue()) && keyValue.getValue().startsWith("@") ? ScriptEngineUtils.buildFunctionCallString(keyValue.getValue()) : keyValue.getValue();
-                                HTTPArgument httpArgument = new HTTPArgument(keyValue.getName(), value);
-                                if (keyValue.getValue() == null) {
-                                    httpArgument.setValue("");
-                                }
-                                httpArgument.setAlwaysEncoded(keyValue.isUrlEncode());
-                                if (StringUtils.isNotBlank(keyValue.getContentType())) {
-                                    httpArgument.setContentType(keyValue.getContentType());
-                                }
-                                arguments.addArgument(httpArgument);
-                            } catch (Exception e) {
-
-                            }
+                    try {
+                        String value = StringUtils.isNotEmpty(keyValue.getValue()) && keyValue.getValue().startsWith("@") ? ScriptEngineUtils.buildFunctionCallString(keyValue.getValue()) : keyValue.getValue();
+                        HTTPArgument httpArgument = new HTTPArgument(keyValue.getName(), value);
+                        if (keyValue.getValue() == null) {
+                            httpArgument.setValue("");
                         }
-                );
+                        httpArgument.setAlwaysEncoded(keyValue.isUrlEncode());
+                        if (StringUtils.isNotBlank(keyValue.getContentType())) {
+                            httpArgument.setContentType(keyValue.getContentType());
+                        }
+                        if (StringUtils.equalsIgnoreCase(this.method, "get")) {
+                            if (StringUtils.isNotEmpty(httpArgument.getValue())) {
+                                arguments.addArgument(httpArgument);
+                            }
+                        } else {
+                            arguments.addArgument(httpArgument);
+                        }
+                    } catch (Exception e) {
+
+                    }
+                }
+        );
         return arguments;
     }
 

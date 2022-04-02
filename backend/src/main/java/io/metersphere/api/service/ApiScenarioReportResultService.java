@@ -46,28 +46,37 @@ public class ApiScenarioReportResultService {
 
     public void batchSave(List<ResultDTO> dtos) {
         if (CollectionUtils.isNotEmpty(dtos)) {
-            SqlSession sqlSession = sqlSessionFactory.openSession(ExecutorType.BATCH);
-            ApiScenarioReportResultMapper batchMapper = sqlSession.getMapper(ApiScenarioReportResultMapper.class);
-            for (ResultDTO dto : dtos) {
-                if (CollectionUtils.isNotEmpty(dto.getRequestResults())) {
-                    dto.getRequestResults().forEach(item -> {
-                        if (StringUtils.isEmpty(item.getName()) || !item.getName().startsWith("Transaction=") || !CollectionUtils.isEmpty(item.getSubRequestResults())) {
-                            batchMapper.insert(this.newApiScenarioReportResult(dto.getReportId(), item));
-                        }
-                    });
+            if (dtos.size() == 1 && CollectionUtils.isNotEmpty(dtos.get(0).getRequestResults()) && dtos.get(0).getRequestResults().size() == 1) {
+                // 单条储存
+                RequestResult requestResult = dtos.get(0).getRequestResults().get(0);
+                if (StringUtils.isEmpty(requestResult.getName()) || !requestResult.getName().startsWith("Transaction=") || !CollectionUtils.isEmpty(requestResult.getSubRequestResults())) {
+                    apiScenarioReportResultMapper.insert(this.newApiScenarioReportResult(dtos.get(0).getReportId(), requestResult));
                 }
-            }
-            sqlSession.flushStatements();
-            if (sqlSession != null && sqlSessionFactory != null) {
-                SqlSessionUtils.closeSqlSession(sqlSession, sqlSessionFactory);
+            } else {
+                SqlSession sqlSession = sqlSessionFactory.openSession(ExecutorType.BATCH);
+                ApiScenarioReportResultMapper batchMapper = sqlSession.getMapper(ApiScenarioReportResultMapper.class);
+                for (ResultDTO dto : dtos) {
+                    if (CollectionUtils.isNotEmpty(dto.getRequestResults())) {
+                        dto.getRequestResults().forEach(item -> {
+                            if (StringUtils.isEmpty(item.getName()) || !item.getName().startsWith("Transaction=") || !CollectionUtils.isEmpty(item.getSubRequestResults())) {
+                                batchMapper.insert(this.newApiScenarioReportResult(dto.getReportId(), item));
+                            }
+                        });
+                    }
+                }
+                sqlSession.flushStatements();
+                if (sqlSession != null && sqlSessionFactory != null) {
+                    SqlSessionUtils.closeSqlSession(sqlSession, sqlSessionFactory);
+                }
             }
         }
     }
 
-    private ApiScenarioReportResult newApiScenarioReportResult(String reportId, RequestResult result) {
+    private ApiScenarioReportResult newApiScenarioReportResult(String reportId, RequestResult baseResult) {
         ApiScenarioReportResult report = new ApiScenarioReportResult();
         //解析误报内容
-        ErrorReportLibraryParseDTO errorCodeDTO = ErrorReportLibraryUtil.parseAssertions(result);
+        ErrorReportLibraryParseDTO errorCodeDTO = ErrorReportLibraryUtil.parseAssertions(baseResult);
+        RequestResult result = errorCodeDTO.getResult();
         report.setId(UUID.randomUUID().toString());
         String resourceId = result.getResourceId();
         report.setResourceId(resourceId);

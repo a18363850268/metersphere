@@ -24,10 +24,17 @@
                 </el-tab-pane>
                 <el-tab-pane name="errorReport" v-if="content.errorCode > 0">
                   <template slot="label">
-                    <span class="fail">{{ $t('error_report_library.option.name') }}</span>
+                    <span class="fail" style="color: #F6972A">{{ $t('error_report_library.option.name') }}</span>
                   </template>
                   <ms-scenario-results v-on:requestResult="requestResult" :console="content.console"
                                        :treeData="fullTreeNodes" ref="errorReportTree"/>
+                </el-tab-pane>
+                <el-tab-pane name="unExecute" v-if="content.unExecute > 0">
+                  <template slot="label">
+                    <span class="fail" style="color: #9C9B9A">{{ $t('api_test.home_page.detail_card.unexecute') }}</span>
+                  </template>
+                  <ms-scenario-results v-on:requestResult="requestResult" :console="content.console"
+                                       :treeData="fullTreeNodes" ref="unExecuteTree"/>
                 </el-tab-pane>
                 <el-tab-pane name="console">
                   <template slot="label">
@@ -129,6 +136,8 @@ export default {
         this.$refs.failsTree.filter(index);
       } else if (this.activeName === "errorReport") {
         this.$refs.errorReportTree.filter("errorReport");
+      } else if(this.activeName === "unExecute"){
+        this.$refs.unExecuteTree.filter("unexecute");
       }
     },
     init() {
@@ -459,6 +468,9 @@ export default {
     formatExportApi(array, scenario) {
       array.forEach(item => {
         if (this.stepFilter && this.stepFilter.get("AllSamplerProxy").indexOf(item.type) !== -1) {
+          if(item.errorCode){
+            item.value.errorCode = item.errorCode;
+          }
           scenario.requestResults.push(item.value);
         }
         if (item.children && item.children.length > 0) {

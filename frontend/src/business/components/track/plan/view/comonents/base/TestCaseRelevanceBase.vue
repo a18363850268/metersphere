@@ -17,6 +17,7 @@
     </template>
 
     <template v-slot:aside>
+      <span v-if="isAcrossSpace" class="menu-title">{{'[' + $t('project.version.checkout') +  $t('commons.space') +']'}}</span>
       <el-select v-if="isAcrossSpace" filterable slot="prepend" v-model="workspaceId" @change="changeWorkspace"
                  style="width: 160px"
                  size="small">
@@ -120,7 +121,7 @@ export default {
         workspaceId: realWorkSpaceId
       }, res => {
         let data = res.data;
-        if (data) {
+        if (data && data.length > 0) {
           const index = data.findIndex(d => d.id === getCurrentProjectID());
           this.projects = data;
           if (index !== -1) {
@@ -132,15 +133,19 @@ export default {
             this.projectName = data[0].name;
             this.changeProject(data[0]);
           }
+        }else {
+          this.$message.warning(this.$t('commons.current_workspace') + this.$t('commons.not_exist') + this.$t('commons.project') + "!");
         }
       })
     },
 
     changeProject(project) {
-      this.currentProject = project;
-      this.$emit('setProject', project.id);
-      // 获取项目时刷新该项目模块
-      this.$emit('refreshNode');
+      if(project){
+        this.currentProject = project;
+        this.$emit('setProject', project.id);
+        // 获取项目时刷新该项目模块
+        this.$emit('refreshNode');
+      }
     },
 
     getWorkSpaceList() {
@@ -164,7 +169,11 @@ export default {
 </script>
 
 <style scoped>
-
+.menu-title {
+  color: darkgrey;
+  margin-left: 10px;
+  margin-right: 10px;
+}
 /*.el-checkbox__label {*/
 /*  float: right;*/
 /*}*/

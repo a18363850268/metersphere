@@ -302,11 +302,14 @@
         api_test_case c
         on t.api_case_id = c.id
       and t.test_plan_id = #{planId}
-       <if test="status != null">
+        <if test="status == 'unExecute'">
+            and (t.status in ('Stop','unExecute') or t.status IS NULL)
+        </if>
+       <if test="status != null and status != 'unExecute'">
          and t.status = #{status}
        </if>
       and (c.status != 'Trash' or c.status is null)
-      where t.test_plan_id = #{planId};
+      where t.test_plan_id = #{planId} ORDER BY t.order DESC
     </select>
 
   <select id="getFailureListByIds" resultType="io.metersphere.api.dto.automation.TestPlanFailureApiDTO">
@@ -327,6 +330,7 @@
     <foreach collection="ids" item="id" separator="," open="(" close=")">
       #{id}
     </foreach>
+    ORDER BY t.order DESC
   </select>
 
 

@@ -8,7 +8,7 @@
       </el-link>
     </div>
     <div v-for="(menu, index) in menus" :key="index">
-      <span class="link-type">
+      <span class="link-type" v-if="!menu.hideScript">
         <i class="icon el-icon-arrow-right" style="font-weight: bold; margin-right: 2px;"
            @click="active(menu)" :class="{'is-active': menu.open}"></i>
         <span @click="active(menu)" class="nav-menu-title nav-font">{{menu.title}}</span>

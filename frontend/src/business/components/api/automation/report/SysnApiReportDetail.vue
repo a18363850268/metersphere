@@ -16,6 +16,7 @@
             <ms-metric-chart
               :content="content"
               :totalTime="totalTime"
+              :report="report"
               v-if="!loading"/>
             <div>
               <el-tabs v-model="activeName" @tab-click="handleClick">
@@ -42,10 +43,17 @@
                 </el-tab-pane>
                 <el-tab-pane name="errorReport" v-if="content.errorCode > 0">
                   <template slot="label">
-                    <span class="fail">{{ $t('error_report_library.option.name') }}</span>
+                    <span class="fail" style="color: #F6972A">{{ $t('error_report_library.option.name') }}</span>
                   </template>
                   <ms-scenario-results v-on:requestResult="requestResult" :console="content.console"
                                        :treeData="fullTreeNodes" ref="errorReportTree"/>
+                </el-tab-pane>
+                <el-tab-pane name="unExecute" v-if="content.unExecute > 0">
+                  <template slot="label">
+                    <span class="fail" style="color: #9C9B9A">{{ $t('api_test.home_page.detail_card.unexecute') }}</span>
+                  </template>
+                  <ms-scenario-results v-on:requestResult="requestResult" :console="content.console"
+                                       :treeData="fullTreeNodes" ref="unExecuteTree"/>
                 </el-tab-pane>
                 <el-tab-pane name="console">
                   <template slot="label">
@@ -120,12 +128,17 @@ export default {
     this.isRequestResult = false;
   },
   created() {
-    if (this.scenario && this.scenario.scenarioDefinition) {
-      this.content.scenarioStepTotal = this.scenario.scenarioDefinition.hashTree.length;
-      this.initTree();
-      this.initMessageSocket();
-      this.clearDebug();
-    }
+
+  },
+  mounted() {
+    this.$nextTick(() => {
+      if (this.scenario && this.scenario.scenarioDefinition) {
+        this.content.scenarioStepTotal = this.scenario.scenarioDefinition.hashTree.length;
+        this.initTree();
+        this.initMessageSocket();
+        this.clearDebug();
+      }
+    });
   },
   props: {
     reportId: String,
@@ -200,6 +213,8 @@ export default {
         this.$refs.failsTree.filter(index);
       } else if (this.activeName === "errorReport") {
         this.$refs.errorReportTree.filter("errorReport");
+      } else if (this.activeName === "unExecute") {
+        this.$refs.unExecuteTree.filter("unexecute");
       }
     },
     handleClick(tab, event) {

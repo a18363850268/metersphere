@@ -527,7 +527,7 @@ public class ApiModuleService extends NodeTreeService<ApiModuleDTO> {
 
     public ApiModule getDefaultNode(String projectId,String protocol) {
         ApiModuleExample example = new ApiModuleExample();
-        example.createCriteria().andProjectIdEqualTo(projectId).andProtocolEqualTo(protocol).andNameEqualTo("未规划接口").andParentIdIsNull();;
+        example.createCriteria().andProjectIdEqualTo(projectId).andProtocolEqualTo(protocol).andNameEqualTo("未规划接口").andParentIdIsNull();
         List<ApiModule> list = apiModuleMapper.selectByExample(example);
         if (CollectionUtils.isEmpty(list)) {
             ApiModule record = new ApiModule();
@@ -549,11 +549,11 @@ public class ApiModuleService extends NodeTreeService<ApiModuleDTO> {
 
     public ApiModule getDefaultNodeUnCreateNew(String projectId,String protocol) {
         ApiModuleExample example = new ApiModuleExample();
-        example.createCriteria().andProjectIdEqualTo(projectId).andProtocolEqualTo(protocol).andNameEqualTo("未规划接口").andParentIdIsNull();;
+        example.createCriteria().andProjectIdEqualTo(projectId).andProtocolEqualTo(protocol).andNameEqualTo("未规划接口").andParentIdIsNull();
         List<ApiModule> list = apiModuleMapper.selectByExample(example);
         if (CollectionUtils.isEmpty(list)) {
             return null;
-        }else {
+        } else {
             return list.get(0);
         }
     }

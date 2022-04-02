@@ -1,25 +1,26 @@
 <template>
-  <div v-if="tableActive">
+  <div>
     <el-table
-      border
-      class="test-content adjust-table ms-table"
-      v-loading="tableIsLoading"
-      :data="data"
-      :default-sort="defaultSort"
-      :class="{'ms-select-all-fixed': showSelectAll}"
-      :height="screenHeight"
-      :row-key="rowKey"
-      :row-class-name="tableRowClassName"
-      :cell-class-name="addPaddingColClass"
-      :highlight-current-row="highlightCurrentRow"
-      @sort-change="sort"
-      @filter-change="filter"
-      @select-all="handleSelectAll"
-      @select="handleSelect"
-      @header-dragend="headerDragend"
-      @cell-mouse-enter="showPopover"
-      @row-click="handleRowClick"
-      ref="table">
+        border
+        class="test-content adjust-table ms-table"
+        v-loading="tableIsLoading"
+        :data="data"
+        :default-sort="defaultSort"
+        :class="{'ms-select-all-fixed': showSelectAll}"
+        :height="screenHeight"
+        :row-key="rowKey"
+        :row-class-name="tableRowClassName"
+        :cell-class-name="addPaddingColClass"
+        :highlight-current-row="highlightCurrentRow"
+        @sort-change="sort"
+        @filter-change="filter"
+        @select-all="handleSelectAll"
+        @select="handleSelect"
+        @header-dragend="headerDragend"
+        @cell-mouse-enter="showPopover"
+        @row-click="handleRowClick"
+        :key="tableActive"
+        ref="table">
 
       <el-table-column
         v-if="enableSelection"
@@ -164,9 +165,9 @@ export default {
       selectDataCounts: 0,
       selectRows: new Set(),
       selectIds: [],
-      tableActive: true,
       // hasBatchTipShow: false,
-      defaultSort: {}
+      defaultSort: {},
+      tableActive: true
     };
   },
   props: {
@@ -407,7 +408,7 @@ export default {
     },
     doLayout() {
       if (this.$refs.table) {
-        setTimeout(this.$refs.table.doLayout(), 200);
+        setTimeout(this.$refs.table.doLayout, 200);
       }
     },
     filter(filters) {
@@ -482,6 +483,7 @@ export default {
     reloadTable() {
       this.tableActive = false;
       this.$nextTick(() => {
+        this.doLayout();
         this.tableActive = true;
       });
     },
@@ -552,4 +554,5 @@ export default {
 .disable-hover >>> tr:hover>td{
   background-color: #ffffff !important;
 }
+
 </style>

@@ -403,8 +403,12 @@ export default {
           scenarioDefinition: t.currentScenario.scenarioDefinition
         };
         let v3 = JSON.parse(JSON.stringify(v2));
-        this.deleteResourceIds(v1.scenarioDefinition);
-        this.deleteResourceIds(v3.scenarioDefinition);
+        if (v1.scenarioDefinition) {
+          this.deleteResourceIds(v1.scenarioDefinition);
+        }
+        if (v3.scenarioDefinition) {
+          this.deleteResourceIds(v3.scenarioDefinition);
+        }
         let delta = jsondiffpatch.diff(JSON.parse(JSON.stringify(v1)), JSON.parse(JSON.stringify(v3)));
         if (delta) {
           this.isSave = true;
@@ -473,6 +477,9 @@ export default {
         if (item.ruleSize >= 0) {
           delete item.ruleSize;
         }
+        if (item.delay) {
+          item.delay = Number(item.delay);
+        }
         if (item.body && item.body.kvs) {
           item.body.kvs.forEach(v => {
             if (v.files) {
@@ -520,6 +527,10 @@ export default {
         this.isSave = false;
         this.removeTab(targetName);
       }
+      if (tab) {
+        tab.splice(0, 1);
+        tab = undefined;
+      }
       if (this.tabs && this.tabs.length === 0) {
         this.refreshAll();
       }
@@ -556,7 +567,9 @@ export default {
       }
     },
     refresh(data) {
-      this.setTabTitle(data);
+      if (data) {
+        this.setTabTitle(data);
+      }
       this.isSave = true;
     },
     refreshTree() {
