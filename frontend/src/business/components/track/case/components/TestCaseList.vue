@@ -1,11 +1,10 @@
 <template>
 
   <span>
-    <el-input :placeholder="$t('commons.search_by_name_or_id')" @change="initTableData" class="search-input" size="small"
-                 v-model="condition.name" ref="inputVal"/>
-    <el-link type="primary" @click="open" style="float: right;margin-top: 5px;padding-right: 10px">
-        {{ $t('commons.adv_search.title') }}
-    </el-link>
+    <ms-search
+      :condition.sync="condition"
+      @search="search">
+    </ms-search>
 
     <ms-table
       v-loading="page.result.loading"
@@ -131,8 +130,9 @@
           :label="$t('commons.tag')"
           min-width="80">
           <template v-slot:default="scope">
-            <ms-tag v-for="(itemName,index)  in scope.row.tags" :key="index" type="success" effect="plain" :show-tooltip="scope.row.tags.length===1&&itemName.length*12<=80"
-                     :content="itemName" style="margin-left: 0px; margin-right: 2px"/>
+            <ms-tag v-for="(itemName,index)  in scope.row.tags" :key="index" type="success" effect="plain"
+                    :show-tooltip="scope.row.tags.length===1&&itemName.length*12<=80"
+                    :content="itemName" style="margin-left: 0px; margin-right: 2px"/>
             <span/>
           </template>
         </ms-table-column>
@@ -221,8 +221,6 @@
 
     <relationship-graph-drawer :graph-data="graphData" ref="relationshipGraph"/>
 
-    <!--高级搜索-->
-    <ms-table-adv-search-bar :condition.sync="condition" :showLink="false" ref="searchBar" @search="search"/>
     <!--  删除接口提示  -->
     <list-item-delete-confirm ref="apiDeleteConfirm" @handleDelete="_handleDeleteVersion"/>
   </span>
@@ -255,12 +253,12 @@ import {
   buildBatchParam,
   deepClone,
   getCustomFieldBatchEditOption,
-  getCustomFieldValue,
+  getCustomFieldValue, getCustomTableHeader,
   getCustomTableWidth,
   getLastTableSortField,
   getPageInfo,
   getTableHeaderWithCustomFields,
-  initCondition,
+  initCondition, parseCustomFilesForList,
 } from "@/common/js/tableUtils";
 import HeaderLabelOperate from "@/business/components/common/head/HeaderLabelOperate";
 import PlanStatusTableItem from "@/business/components/track/common/tableItems/plan/PlanStatusTableItem";
@@ -283,6 +281,8 @@ import {editTestCaseOrder} from "@/network/testCase";
 import {getGraphByCondition} from "@/network/graph";
 import MsTableAdvSearchBar from "@/business/components/common/components/search/MsTableAdvSearchBar";
 import ListItemDeleteConfirm from "@/business/components/common/components/ListItemDeleteConfirm";
+import {getAdvSearchCustomField} from "@/business/components/common/components/search/custom-component";
+import MsSearch from "@/business/components/common/components/search/MsSearch";
 
 const requireComponent = require.context('@/business/components/xpack/', true, /\.vue$/);
 const relationshipGraphDrawer = requireComponent.keys().length > 0 ? requireComponent("./graph/RelationshipGraphDrawer.vue") : {};
@@ -290,6 +290,7 @@ const relationshipGraphDrawer = requireComponent.keys().length > 0 ? requireComp
 export default {
   name: "TestCaseList",
   components: {
+    MsSearch,
     ListItemDeleteConfirm,
     MsTableAdvSearchBar,
     TestCasePreview,
@@ -330,7 +331,8 @@ export default {
       isMoveBatch: true,
       condition: {
         components: TEST_CASE_CONFIGS,
-        filters: {}
+        filters: {},
+        custom: true,
       },
       versionFilters: [],
       graphData: {},
@@ -477,7 +479,7 @@ export default {
       testCaseTemplate: {},
       members: [],
       page: getPageInfo(),
-      fields: [],
+      fields: getCustomTableHeader('TRACK_TEST_CASE'),
       fieldsWidth: getCustomTableWidth('TRACK_TEST_CASE'),
       memberMap: new Map(),
       rowCase: {},
@@ -554,17 +556,19 @@ export default {
     }
     this.getVersionOptions();
   },
-  activated() {
-    this.getTemplateField();
-    let ids = this.$route.params.ids;
-    if (ids) {
-      this.condition.ids = ids;
-    }
-    this.initTableData();
-    this.condition.ids = null;
-    this.getVersionOptions();
-  },
   watch: {
+    '$route'(to) {
+      if (to.path.indexOf("/track/case/all") >= 0) {
+        this.getTemplateField();
+        let ids = this.$route.params.ids;
+        if (ids) {
+          this.condition.ids = ids;
+        }
+        this.initTableData();
+        this.condition.ids = null;
+        this.getVersionOptions();
+      }
+    },
     selectNodeIds() {
       this.page.currentPage = 1;
       if (!this.trashEnable) {
@@ -625,16 +629,21 @@ export default {
       let p2 = getTestTemplate();
       Promise.all([p1, p2]).then((data) => {
         let template = data[1];
-        this.page.result.loading = true;
         this.testCaseTemplate = template;
         this.fields = getTableHeaderWithCustomFields('TRACK_TEST_CASE', this.testCaseTemplate.customFields);
+        // todo 处理高级搜索自定义字段部分
+        let comp = getAdvSearchCustomField(this.condition.components, this.testCaseTemplate.customFields);
+        this.condition.components.push(...comp);
         this.setTestCaseDefaultValue(template);
-        this.page.result.loading = false;
-        if (this.$refs.table) {
-          this.$refs.table.reloadTable();
-        }
         this.typeArr = [];
         getCustomFieldBatchEditOption(template.customFields, this.typeArr, this.valueArr, this.members);
+
+        this.$nextTick(() => {
+          if (this.$refs.table) {
+            this.$refs.table.resetHeader();
+          }
+          this.page.result.loading = false;
+        });
       });
     },
     setTestCaseDefaultValue(template) {
@@ -652,18 +661,14 @@ export default {
     },
     getCustomFieldValue(row, field) {
       let value = getCustomFieldValue(row, field, this.members);
-      if (!value) {
-        if (field.name === '用例等级') {
-          return row.priority;
-        }
-        if (field.name === '责任人') {
-          return row.maintainer;
-        }
-        if (field.name === '用例状态') {
-          return row.status;
-        }
+      if (field.name === '用例等级') {
+        return row.priority;
+      } else if (field.name === '责任人') {
+        return row.maintainer;
+      } else if (field.name === '用例状态') {
+        return row.status;
       }
-      return value;
+      return value ? value : '';
     },
     getCustomFieldFilter(field) {
       if (field.name === '用例等级') {
@@ -720,9 +725,6 @@ export default {
       }
       this.getData();
     },
-    open() {
-      this.$refs.searchBar.open();
-    },
     getData() {
       this.getSelectDataRange();
       this.condition.selectThisWeedData = false;
@@ -775,15 +777,11 @@ export default {
           let data = response.data;
           this.page.total = data.itemCount;
           this.page.data = data.listObject;
-          this.page.data.forEach(item => {
-            if (item.customFields) {
-              item.customFields = JSON.parse(item.customFields);
-            }
-          });
+          parseCustomFilesForList(this.page.data);
           parseTag(this.page.data);
         });
         this.$emit("getTrashList");
-        this.$emit("getPublicList")
+        this.$emit("getPublicList");
       }
     },
     search() {
@@ -1052,10 +1050,14 @@ export default {
       param.customTemplateFieldId = form.type.slice(6);
       param.condition = this.condition;
       param.customField = {
-        id: form.customField.id,
+        fieldId: form.customField.id,
         name: form.customField.name,
-        value: form.customField.defaultValue
       };
+      if (form.customField.type && (form.customField.type === 'richText' || form.customField.type === 'textarea')) {
+        param.customField.textValue = form.customField.defaultValue;
+      } else {
+        param.customField.value = JSON.stringify(form.customField.defaultValue ? form.customField.defaultValue : '');
+      }
       this.$post('/test/case/batch/edit', param, () => {
         this.$success(this.$t('commons.save_success'));
         this.refresh();
@@ -1078,9 +1080,9 @@ export default {
             this.refresh();
           });
         } else {
-          this.$warning(this.$t('test_track.case.public_warning'))
+          this.$warning(this.$t('test_track.case.public_warning'));
         }
-      })
+      });
 
     },
     handleDeleteBatchToPublic() {
@@ -1088,8 +1090,8 @@ export default {
         confirmButtonText: this.$t('commons.confirm'),
         callback: (action) => {
           if (action === 'confirm') {
-            let ids = this.$refs.table.selectIds;
-            this.$post('/test/case/batch/movePublic/deleteToGc', ids, () => {
+            let param = buildBatchParam(this, this.$refs.table.selectIds);
+            this.$post('/test/case/batch/movePublic/deleteToGc', param, () => {
               this.$refs.table.clear();
               this.$emit("refresh");
               this.$success(this.$t('commons.delete_success'));
@@ -1115,8 +1117,7 @@ export default {
             this.$refs.apiDeleteConfirm.close();
             this.$emit("refreshTable");
           });
-        }
-        else {
+        } else {
           this.$get('/test/case/delete/' + testCase.versionId + '/' + testCase.refId, () => {
             this.$success(this.$t('commons.delete_success'));
             this.$refs.apiDeleteConfirm.close();
@@ -1127,8 +1128,8 @@ export default {
       // 删除全部版本
       else {
         if (this.publicEnable) {
-          let ids = [testCase.id];
-          this.$post('/test/case/batch/movePublic/deleteToGc', ids, () => {
+          let param = buildBatchParam(this, this.$refs.table.selectIds);
+          this.$post('/test/case/batch/movePublic/deleteToGc', param, () => {
             this.$success(this.$t('commons.delete_success'));
             // this.initTable();
             this.$refs.apiDeleteConfirm.close();
@@ -1216,5 +1217,9 @@ export default {
 
 .el-tag {
   margin-left: 10px;
+}
+
+/deep/ .el-table{
+  overflow: auto;
 }
 </style>

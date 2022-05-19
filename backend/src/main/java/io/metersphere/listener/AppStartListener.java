@@ -65,6 +65,8 @@ public class AppStartListener implements ApplicationListener<ApplicationReadyEve
     private TestReviewTestCaseService testReviewTestCaseService;
     @Resource
     private MockConfigService mockConfigService;
+    @Resource
+    private CustomFieldResourceService customFieldResourceService;
 
     @Value("${jmeter.home}")
     private String jmeterHome;
@@ -137,8 +139,7 @@ public class AppStartListener implements ApplicationListener<ApplicationReadyEve
     }
 
     private void initOnceOperate() {
-        initOnceOperate(apiAutomationService::checkApiScenarioUseUrl, "init.scenario.url");
-        initOnceOperate(apiAutomationService::checkApiScenarioReferenceId, "init.scenario.referenceId");
+        initOnceOperate(apiAutomationService::resetApiScenarioReferenceId, "init.scenario.referenceId.reset");
         initOnceOperate(apiAutomationService::initExecuteTimes, "init.scenario.executeTimes");
         initOnceOperate(issuesService::syncThirdPartyIssues, "init.issue");
         initOnceOperate(issuesService::issuesCount, "init.issueCount");
@@ -155,6 +156,8 @@ public class AppStartListener implements ApplicationListener<ApplicationReadyEve
         initOnceOperate(testReviewTestCaseService::initOrderField, "init.sort.review.test.case");
         initOnceOperate(apiDefinitionService::initDefaultModuleId, "init.default.module.id");
         initOnceOperate(mockConfigService::initExpectNum, "init.mock.expectNum");
+        initOnceOperate(customFieldResourceService::compatibleData, "init.custom.field.resource");
+        initOnceOperate(jarConfigService::initJarPath, "init.jar.path");
     }
 
     /**

@@ -10,16 +10,15 @@
 
       <ms-environment-select :project-id="projectId" v-if="isTestPlan || isScript" :is-read-only="isReadOnly"
                              @setEnvironment="setEnvironment" ref="msEnvironmentSelect"/>
-
-      <el-input :placeholder="$t('commons.search_by_name_or_id')" @blur="initTable"
-                @keyup.enter.native="initTable" class="search-input" size="small" v-model="condition.name"/>
-      <ms-table-adv-search-bar :condition.sync="condition" class="adv-search-bar"
-                               v-if="condition.components !== undefined && condition.components.length > 0"
-                               @search="initTable"/>
+      <ms-search
+        :condition.sync="condition"
+        @search="initTable">
+      </ms-search>
       <ms-table :data="tableData" :select-node-ids="selectNodeIds" :condition="condition" :page-size="pageSize"
                 :total="total" enableSelection
                 :screenHeight="screenHeight"
                 @refresh="initTable"
+                @selectCountChange="selectCountChange"
                 operator-width="170px"
                 ref="table"
       >
@@ -73,6 +72,16 @@
           :label="'创建人'"/>
 
         <ms-table-column
+          sortable="createTime"
+          width="160px"
+          :label="$t('commons.create_time')"
+          prop="createTime">
+          <template v-slot:default="scope">
+            <span>{{ scope.row.createTime | timestampFormatDate }}</span>
+          </template>
+        </ms-table-column>
+
+        <ms-table-column
           sortable="updateTime"
           width="160px"
           :label="$t('api_test.definition.api_last_time')"
@@ -85,8 +94,6 @@
       <ms-table-pagination :change="initTable" :current-page.sync="currentPage" :page-size.sync="pageSize"
                            :total="total"/>
     </api-list-container>
-
-    <table-select-count-bar :count="selectRows.size"/>
 
   </div>
 
@@ -107,16 +114,15 @@ import {API_METHOD_COLOUR, CASE_PRIORITY} from "../../../definition/model/JsonDa
 import ApiListContainer from "../../../definition/components/list/ApiListContainer";
 import PriorityTableItem from "../../../../track/common/tableItems/planview/PriorityTableItem";
 import MsEnvironmentSelect from "../../../definition/components/case/MsEnvironmentSelect";
-import TableSelectCountBar from "./TableSelectCountBar";
 import {_filter, _sort, buildBatchParam} from "@/common/js/tableUtils";
 import MsTableAdvSearchBar from "@/business/components/common/components/search/MsTableAdvSearchBar";
 import {TEST_PLAN_RELEVANCE_API_CASE_CONFIGS} from "@/business/components/common/components/search/search-components";
 import {hasLicense} from "@/common/js/utils";
+import MsSearch from "@/business/components/common/components/search/MsSearch";
 
 export default {
   name: "RelevanceCaseList",
   components: {
-    TableSelectCountBar,
     MsEnvironmentSelect,
     PriorityTableItem,
     ApiListContainer,
@@ -129,6 +135,7 @@ export default {
     MsBatchEdit,
     MsTable,
     MsTableColumn,
+    MsSearch,
     MsTableAdvSearchBar
   },
   data() {
@@ -225,6 +232,9 @@ export default {
   methods: {
     isApiListEnableChange(data) {
       this.$emit('isApiListEnableChange', data);
+    },
+    selectCountChange(data) {
+      this.$emit('selectCountChange', data);
     },
     initTable(projectId) {
       this.condition.status = "";
@@ -323,6 +333,10 @@ export default {
         param = batchParam;
       }
       param.ids = Array.from(sampleSelectRows).map(row => row.id);
+      let tableDataIds = Array.from(this.tableData).map(row => row.id);
+      param.ids.sort((a, b) => {
+        return tableDataIds.indexOf(a) - tableDataIds.indexOf(b);
+      });
       return param;
     },
     checkVersionEnable() {

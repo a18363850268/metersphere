@@ -16,7 +16,7 @@
       </el-dropdown-menu>
     </el-dropdown>
     <ms-reference-view @openScenario="openScenario" ref="viewRef"/>
-    <ms-schedule-maintain ref="scheduleMaintain" @refreshTable="refreshTable"/>
+    <ms-schedule-maintain ref="scheduleMaintain" @refreshTable="refreshTable" :request="request"/>
 
   </div>
 </template>
@@ -24,21 +24,24 @@
 <script>
 import MsReferenceView from "@/business/components/api/automation/scenario/ReferenceView";
 import MsScheduleMaintain from "@/business/components/api/automation/schedule/ScheduleMaintain";
-import {getCurrentProjectID, getUUID} from "@/common/js/utils";
+import {getCurrentProjectID, getUUID, hasPermission} from "@/common/js/utils";
 
 export default {
   name: "MsScenarioExtendButtons",
   components: {MsReferenceView, MsScheduleMaintain},
   props: {
-    row: Object
+    row: Object,
+    request: {}
   },
   methods: {
+    hasPermission,
     handleCommand(cmd) {
       switch (cmd) {
         case  "ref":
           this.$refs.viewRef.open(this.row);
           break;
         case "schedule":
+          this.$emit('openSchedule');
           this.$refs.scheduleMaintain.open(this.row);
           break;
         case "create_performance":
@@ -47,6 +50,10 @@ export default {
       }
     },
     createPerformance(row) {
+      if (!hasPermission('PROJECT_PERFORMANCE_TEST:READ+CREATE')) {
+        this.$warning(this.$t('api_test.create_performance_test_tips'));
+        return;
+      }
       this.infoDb = false;
       let url = "/api/automation/genPerformanceTestJmx";
       let run = {};
@@ -78,7 +85,7 @@ export default {
     },
     refreshTable() {
 
-    }
+    },
   }
 };
 </script>

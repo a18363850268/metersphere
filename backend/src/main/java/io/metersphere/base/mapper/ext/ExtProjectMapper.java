@@ -23,6 +23,8 @@ public interface ExtProjectMapper {
 
     List<String> getProjectIds();
 
+    List<Project> getProjectForCustomField(String workspaceId);
+
     String getMaxSystemId();
 
     @MapKey("id")
@@ -39,4 +41,6 @@ public interface ExtProjectMapper {
     void setDefaultMessageTask(@Param("projectId") String projectId);
 
     List<ProjectDTO> queryListByIds(@Param("ids") List<String> ids);
+
+    void updateUseDefaultCaseTemplateProject(@Param("originId") String originId,@Param("templateId") String templateId,@Param("projectId") String projectId);
 }

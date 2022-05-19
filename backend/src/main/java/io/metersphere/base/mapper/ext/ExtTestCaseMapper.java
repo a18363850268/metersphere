@@ -4,6 +4,7 @@ import io.metersphere.base.domain.TestCase;
 import io.metersphere.base.domain.TestCaseWithBLOBs;
 import io.metersphere.controller.request.BaseQueryRequest;
 import io.metersphere.dto.RelationshipGraphData;
+import io.metersphere.track.dto.CustomFieldResourceCompatibleDTO;
 import io.metersphere.track.dto.TestCaseDTO;
 import io.metersphere.track.request.testcase.QueryTestCaseRequest;
 import io.metersphere.track.request.testcase.TestCaseBatchRequest;
@@ -136,6 +137,8 @@ public interface ExtTestCaseMapper {
 
     String getLastExecStatusById(String id);
 
+    List<TestCaseDTO> getLastExecStatusByIdList(@Param("ids") List<String> idList);
+
     int countByWorkSpaceId(String workSpaceId);
 
     long trashCount(@Param("projectId") String projectId);
@@ -147,4 +150,8 @@ public interface ExtTestCaseMapper {
     List<TestCase> getMaintainerMap(@Param("request") QueryTestCaseRequest request);
 
     List<TestCaseDTO> getForNodeEdit(@Param("ids") List<String> ids);
+
+    List<CustomFieldResourceCompatibleDTO> getForCompatibleCustomField(String projectId, int offset, int pageSize);
+
+    List<Map<String, Object>> moduleExtraNodeCount(@Param("nodeIds") List<String> nodeIds);
 }

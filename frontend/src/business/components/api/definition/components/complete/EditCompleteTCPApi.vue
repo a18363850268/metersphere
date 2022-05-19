@@ -276,6 +276,12 @@ export default {
           }
         }
         this.$emit('saveApi', this.basisData);
+        this.$store.state.apiStatus.set("fromChange", false);
+        this.$store.state.apiMap.set(this.basisData.id, this.$store.state.apiStatus);
+      } else {
+        if (this.$refs.versionHistory) {
+          this.$refs.versionHistory.loading = false;
+        }
       }
     },
     runTest() {
@@ -364,10 +370,12 @@ export default {
       });
     },
     compare(row) {
+      this.basisData.createTime = this.$refs.versionHistory.versionOptions.filter(v => v.id === this.basisData.versionId)[0].createTime;
       this.$get('/api/definition/get/' +  row.id+"/"+this.basisData.refId, response => {
         this.$get('/api/definition/get/' + response.data.id, res => {
           if (res.data) {
             this.newData = res.data;
+            this.newData.createTime = row.createTime;
             if (this.newData.method !== 'TCP' && this.newData.method !== 'ESB') {
               this.newData.method = this.newData.protocol;
             }
@@ -494,6 +502,9 @@ export default {
           this.createNewVersionVisible = true;
         } else {
           this.saveApi();
+          if (this.$refs.versionHistory) {
+            this.$refs.versionHistory.loading = false;
+          }
         }
       });
     },

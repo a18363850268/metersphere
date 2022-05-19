@@ -5,6 +5,7 @@ import com.alibaba.fastjson.JSONObject;
 import io.metersphere.base.domain.IssuesDao;
 import io.metersphere.base.domain.IssuesWithBLOBs;
 import io.metersphere.base.domain.Project;
+import io.metersphere.base.domain.ext.CustomFieldResource;
 import io.metersphere.commons.constants.CustomFieldType;
 import io.metersphere.commons.constants.IssuesManagePlatform;
 import io.metersphere.commons.constants.IssuesStatus;
@@ -27,9 +28,6 @@ import io.metersphere.track.service.IssuesService;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.StringEscapeUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.commonmark.node.Node;
-import org.commonmark.parser.Parser;
-import org.commonmark.renderer.html.HtmlRenderer;
 import org.springframework.web.client.HttpClientErrorException;
 
 import java.io.File;
@@ -97,16 +95,18 @@ public class JiraPlatform extends AbstractIssuePlatform {
 
         // 附件处理
         Map<String, String> fileContentMap = new HashMap<>();
-        for (int i = 0; i < attachments.size(); i++) {
-            JSONObject attachment = attachments.getJSONObject(i);
-            String filename = attachment.getString("filename");
-            String content = attachment.getString("content");
-            if (StringUtils.equals(attachment.getString("mimeType"), "image/jpeg")) {
-                String contentUrl = "![" + filename + "](" + content + ")";
-                fileContentMap.put(filename, contentUrl);
-            } else {
-                String contentUrl = "附件[" + filename + "]下载地址:" + content;
-                fileContentMap.put(filename, contentUrl);
+        if (CollectionUtils.isNotEmpty(attachments)) {
+            for (int i = 0; i < attachments.size(); i++) {
+                JSONObject attachment = attachments.getJSONObject(i);
+                String filename = attachment.getString("filename");
+                String content = attachment.getString("content");
+                if (StringUtils.equals(attachment.getString("mimeType"), "image/jpeg")) {
+                    String contentUrl = "![" + filename + "](" + content + ")";
+                    fileContentMap.put(filename, contentUrl);
+                } else {
+                    String contentUrl = "附件[" + filename + "]下载地址:" + content;
+                    fileContentMap.put(filename, contentUrl);
+                }
             }
         }
 
@@ -137,7 +137,7 @@ public class JiraPlatform extends AbstractIssuePlatform {
         JSONObject statusObj = (JSONObject) fields.get("status");
         if (statusObj != null) {
             JSONObject statusCategory = (JSONObject) statusObj.get("statusCategory");
-            return statusCategory.getString("name");
+            return statusObj.getString("name") == null ? statusCategory.getString("name") : statusObj.getString("name");
         }
         return "";
     }
@@ -287,9 +287,12 @@ public class JiraPlatform extends AbstractIssuePlatform {
         JSONObject fields = new JSONObject();
         JSONObject project = new JSONObject();
 
-        String desc = issuesRequest.getDescription();
+        String desc = "";
         // 附件描述信息处理
-        desc = dealWithImage(issuesRequest.getDescription());
+        if (StringUtils.isNotBlank(issuesRequest.getDescription())) {
+            desc = dealWithImage(issuesRequest.getDescription());
+        }
+
 
         fields.put("project", project);
         project.put("key", jiraKey);
@@ -482,6 +485,10 @@ public class JiraPlatform extends AbstractIssuePlatform {
         issues.forEach(item -> {
             try {
                 getUpdateIssue(item, jiraClientV2.getIssues(item.getPlatformId()));
+                String customFields = item.getCustomFields();
+                // 把自定义字段存入新表
+                List<CustomFieldResource> customFieldResource = customFieldService.getJiraCustomFieldResource(customFields, project.getId());
+                customFieldIssuesService.addFields(item.getId(), customFieldResource);
                 issuesMapper.updateByPrimaryKeySelective(item);
             } catch (HttpClientErrorException e) {
                 if (e.getRawStatusCode() == 404) {

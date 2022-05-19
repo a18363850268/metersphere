@@ -182,8 +182,12 @@ public abstract class JiraAbstractClient extends BaseClient {
     }
 
     public void auth() {
+        ResponseEntity<String> response = null;
         try {
-            restTemplate.exchange(getBaseUrl() + "/myself", HttpMethod.GET, getAuthHttpEntity(), String.class);
+            response = restTemplate.exchange(getBaseUrl() + "/myself", HttpMethod.GET, getAuthHttpEntity(), String.class);
+            if (StringUtils.isNotBlank(response.getBody()) && !response.getBody().startsWith("{\"self\"")) {
+                MSException.throwException(Translator.get("jira_auth_url_error"));
+            }
         } catch (HttpClientErrorException e) {
             if (e.getRawStatusCode() == 401) {
                 MSException.throwException(Translator.get("jira_auth_error"));
@@ -229,7 +233,7 @@ public abstract class JiraAbstractClient extends BaseClient {
 
     public JiraIssueListResponse getProjectIssues(int startAt, int maxResults, String projectKey, String issueType) {
         ResponseEntity<String> responseEntity;
-        responseEntity = restTemplate.exchange(getBaseUrl() + "/search?startAt={1}&maxResults={2}&jql=project={3}+AND+issuetype={4}&fields=status,assignee,summary,created,updated,attachment,description",
+        responseEntity = restTemplate.exchange(getBaseUrl() + "/search?startAt={1}&maxResults={2}&jql=project={3}+AND+issuetype={4}",
                 HttpMethod.GET, getAuthHttpEntity(), String.class, startAt, maxResults, projectKey, issueType);
         return  (JiraIssueListResponse)getResultForObject(JiraIssueListResponse.class, responseEntity);
     }

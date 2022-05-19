@@ -29,8 +29,9 @@
       :condition="page.condition"
       :total="page.total"
       :page-size.sync="page.pageSize"
-      :screen-height="null"
+      :screen-height="screenHeight"
       @handlePageChange="getTestCases"
+      @selectCountChange="setSelectCounts"
       @refresh="getTestCases"
       ref="table">
 
@@ -54,7 +55,7 @@
         prop="versionId"
         :filters="versionFilters"
         :label="$t('commons.version')"
-        min-width="120px">
+        show-overflow-tooltip>
         <template v-slot:default="scope">
           <span>{{ scope.row.versionName }}</span>
         </template>
@@ -64,13 +65,14 @@
         prop="priority"
         :filters="priorityFilters"
         sortable
-        :label="$t('test_track.case.priority')">
+        :label="$t('test_track.case.priority')"
+        width="120px">
         <template v-slot:default="scope">
           <priority-table-item :value="scope.row.priority"/>
         </template>
       </ms-table-column>
 
-      <ms-table-column prop="tags" :label="$t('commons.tag')">
+      <ms-table-column prop="tags" :label="$t('commons.tag')" width="90px">
         <template v-slot:default="scope">
           <ms-tag v-for="(itemName, index)  in scope.row.tags" :key="index" type="success" effect="plain"
                   :content="itemName" style="margin-left: 0px; margin-right: 2px"/>
@@ -98,7 +100,8 @@
 
     </ms-table>
 
-    <ms-table-pagination :change="getTestCases" :current-page.sync="page.currentPage" :page-size.sync="page.pageSize" :total="page.total"/>
+    <ms-table-pagination :change="getTestCases" :current-page.sync="page.currentPage" :page-size.sync="page.pageSize"
+                         :total="page.total"/>
   </test-case-relevance-base>
 
 </template>
@@ -116,7 +119,8 @@ import MsTableColumn from "@/business/components/common/components/table/MsTable
 import MsTable from "@/business/components/common/components/table/MsTable";
 import MsTablePagination from "@/business/components/common/pagination/TablePagination";
 import MsTag from "@/business/components/common/components/MsTag";
-import {hasLicense, getCurrentProjectID} from "@/common/js/utils";
+import {getCurrentProjectID, hasLicense} from "@/common/js/utils";
+
 const requireComponent = require.context('@/business/components/xpack/', true, /\.vue$/);
 const VersionSelect = requireComponent.keys().length > 0 ? requireComponent("./version/VersionSelect.vue") : {};
 
@@ -136,14 +140,14 @@ export default {
     MsTableHeader,
     'VersionSelect': VersionSelect.default,
   },
-  mounted(){
+  mounted() {
     this.getVersionOptions();
   },
   data() {
     return {
       openType: 'relevance',
       result: {},
-      isSaving:false,
+      isSaving: false,
       treeNodes: [],
       selectNodeIds: [],
       selectNodeNames: [],
@@ -151,6 +155,7 @@ export default {
       projectName: '',
       projects: [],
       customNum: false,
+      screenHeight: '400',
       priorityFilters: [
         {text: 'P0', value: 'P0'},
         {text: 'P1', value: 'P1'},
@@ -193,7 +198,7 @@ export default {
       this.page.condition.projectId = this.projectId;
       this.getProjectNode();
       this.getTestCases();
-      this.getProject();
+      this.getCustomNum();
     }
   },
   methods: {
@@ -210,13 +215,13 @@ export default {
     setProject(projectId) {
       this.projectId = projectId;
     },
-    getProject() {
-      this.$get("/project/get/" + this.projectId, result => {
+    getCustomNum() {
+      this.$get('/project_application/get/config/' + this.projectId + "/CASE_CUSTOM_NUM", result => {
         let data = result.data;
         if (data) {
-          this.customNum = data.customNum;
+          this.customNum = data.caseCustomNum;
         }
-      })
+      });
     },
     getTestCases() {
       let condition = this.page.condition;
@@ -260,7 +265,7 @@ export default {
     getVersionOptions() {
       if (hasLicense()) {
         this.$get('/project/version/get-project-versions/' + getCurrentProjectID(), response => {
-          this.versionOptions= response.data;
+          this.versionOptions = response.data;
           this.versionFilters = response.data.map(u => {
             return {text: u.name, value: u.id};
           });
@@ -270,9 +275,12 @@ export default {
     changeVersion(currentVersion) {
       this.page.condition.versionId = currentVersion || null;
       this.getTestCases();
+    },
+    setSelectCounts(data) {
+      this.$refs.baseRelevance.selectCounts = data;
     }
   }
-}
+};
 </script>
 
 <style scoped>

@@ -9,10 +9,7 @@ import io.metersphere.commons.exception.MSException;
 import io.metersphere.commons.utils.PageUtils;
 import io.metersphere.commons.utils.Pager;
 import io.metersphere.commons.utils.SessionUtils;
-import io.metersphere.controller.request.member.AddMemberRequest;
-import io.metersphere.controller.request.member.EditPassWordRequest;
-import io.metersphere.controller.request.member.QueryMemberRequest;
-import io.metersphere.controller.request.member.UserRequest;
+import io.metersphere.controller.request.member.*;
 import io.metersphere.controller.request.resourcepool.UserBatchProcessRequest;
 import io.metersphere.dto.UserDTO;
 import io.metersphere.dto.UserGroupPermissionDTO;
@@ -150,11 +147,23 @@ public class UserController {
         return userService.getProjectMemberList(request);
     }
 
+    @GetMapping("/project/member/option/{projectId}")
+    public List<User> getProjectMemberOption(@PathVariable String projectId) {
+        return userService.getProjectMemberOption(projectId);
+    }
+
     /**
      * 获取工作空间成员用户 不分页
      */
     @PostMapping("/ws/member/list/all")
     public List<User> getMemberList(@RequestBody QueryMemberRequest request) {
+        return userService.getMemberList(request);
+    }
+
+    @GetMapping("/ws/current/member/list")
+    public List<User> getCurrentWorkspaceMember() {
+        QueryMemberRequest request = new QueryMemberRequest();
+        request.setWorkspaceId(SessionUtils.getCurrentWorkspaceId());
         return userService.getMemberList(request);
     }
 
@@ -164,6 +173,7 @@ public class UserController {
     @PostMapping("/ws/member/add")
     @MsAuditLog(module = OperLogModule.WORKSPACE_MEMBER, type = OperLogConstants.CREATE, title = "添加工作空间成员")
     public void addMember(@RequestBody AddMemberRequest request) {
+
         String wsId = request.getWorkspaceId();
 //        workspaceService.checkWorkspaceOwner(wsId);
         userService.addMember(request);
@@ -260,5 +270,19 @@ public class UserController {
     @GetMapping("/get/ws_pj/{userId}")
     public Map<Object, Object> getWSAndProjectByUserId(@PathVariable String userId) {
         return userService.getWSAndProjectByUserId(userId);
+    }
+
+    /**
+     * 配置 用户的selenium-server 地址 ip:port
+     */
+    @PostMapping("/update/seleniumServer")
+    @MsAuditLog(module = OperLogModule.SYSTEM_USER, type = OperLogConstants.UPDATE, title = "selenium-server地址")
+    public int updateSeleniumServer(@RequestBody EditSeleniumServerRequest request) {
+        return userService.updateUserSeleniumServer(request);
+    }
+
+    @GetMapping("/verify/seleniumServer")
+    public String verifySeleniumServer() {
+        return userService.verifyUserSeleniumServer();
     }
 }

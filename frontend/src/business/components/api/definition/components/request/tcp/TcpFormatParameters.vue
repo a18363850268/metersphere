@@ -128,7 +128,8 @@
                     <div class="el-step__icon-inner">{{ request.preSize }}</div>
                   </div>
                 </span>
-                <ms-jmx-step :request="request" :apiId="request.id" protocol="TCP" :response="response"
+                <ms-jmx-step :request="request" :scenarioId="scenarioId"
+                             :apiId="request.id" protocol="TCP" :response="response"
                              :tab-type="'pre'"
                              ref="preStep"/>
               </el-tab-pane>
@@ -140,7 +141,8 @@
                     <div class="el-step__icon-inner">{{ request.postSize }}</div>
                   </div>
                 </span>
-                <ms-jmx-step :request="request" :apiId="request.id" protocol="TCP" :response="response"
+                <ms-jmx-step :request="request" :scenarioId="scenarioId"
+                             :apiId="request.id" protocol="TCP" :response="response"
                              :tab-type="'post'"
                              ref="postStep"/>
               </el-tab-pane>
@@ -152,7 +154,7 @@
                     <div class="el-step__icon-inner">{{ request.ruleSize }}</div>
                   </div>
                 </span>
-                <ms-jmx-step :request="request" :apiId="request.id" protocol="TCP" :response="response"
+                <ms-jmx-step :request="request" :apiId="request.id" protocol="TCP" :scenario-id="scenarioId" :response="response"
                              @reload="reloadBody"
                              :tab-type="'assertionsRule'" ref="assertionsRule"/>
               </el-tab-pane>
@@ -200,6 +202,7 @@ export default {
     MsJmxStep
   },
   props: {
+    scenarioId: String,
     request: {},
     basisData: {},
     response: {},

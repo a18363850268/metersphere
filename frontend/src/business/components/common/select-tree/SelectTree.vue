@@ -288,8 +288,9 @@ export default {
       this.$refs.tree.setCurrentKey(null);//清除树选中key
       this.returnDatas = null;
       this.returnDataKeys = '';
+      this.selectNodeIds = [];
       this.popoverHide();
-
+      this.$emit('clean');
     },
     //单选:设置、初始化值 key
     setKey(thisKey) {
@@ -298,6 +299,7 @@ export default {
       if (node && node.data) {
         this.setData(node.data);
       }
+      this.popoverHide();
     },
     //单选：设置、初始化对象
     setData(data) {
@@ -305,7 +307,8 @@ export default {
       this.options.push({label: data[this.obj.label], value: data[this.obj.id]});
       this.returnDatas = data;
       this.returnDataKeys = data[this.obj.id]
-
+      this.selectNodeIds = [];
+      this.getChildNodeId(data, this.selectNodeIds);
     },
     //多选:设置、初始化值 keys
     setKeys(thisKeys) {
@@ -352,8 +355,8 @@ export default {
     },
     //下拉框关闭执行
     popoverHide() {
-      this.$emit('getValue', this.returnDataKeys, this.returnDatas ? this.returnDatas : {});
       this.$emit('setSelectNodeIds', this.selectNodeIds);
+      this.$emit('getValue', this.returnDataKeys, this.returnDatas ? this.returnDatas : {});
     },
     // 多选，清空所有勾选
     clearSelectedNodes() {

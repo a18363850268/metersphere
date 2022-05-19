@@ -210,7 +210,6 @@
                         :scenario="data"
                         :response="response"
                         :currentScenario="currentScenario"
-                        :currentEnvironmentId="currentEnvironmentId"
                         :node="node"
                         :project-list="projectList"
                         :env-map="projectEnvMap"
@@ -360,6 +359,9 @@
           :old-enable-cookie-share="enableCookieShare"
           :old-on-sample-error="onSampleError"
           :project-list="projectList"
+          :new-create-time="newCreateTime"
+          :old-create-time="oldCreateTime"
+          :old-user-name="oldUserName"
           :type="type"/>
       </el-dialog>
 
@@ -393,6 +395,7 @@ import {
 } from "@/business/components/api/automation/api-automation";
 import MsComponentConfig from "./component/ComponentConfig";
 import {ENV_TYPE} from "@/common/js/constants";
+import {hisDataProcessing} from "@/business/components/api/definition/api-definition";
 
 const requireComponent = require.context('@/business/components/xpack/', true, /\.vue$/);
 const versionHistory = requireComponent.keys().length > 0 ? requireComponent("./version/VersionHistory.vue") : {};
@@ -463,7 +466,6 @@ export default {
         ],
       },
       environments: [],
-      currentEnvironmentId: "",
       maintainerOptions: [],
       value: API_STATUS[0].id,
       options: API_STATUS,
@@ -510,7 +512,6 @@ export default {
       isTop: false,
       stepSize: 0,
       message: "",
-      websocket: {},
       messageWebSocket: {},
       buttonData: [],
       stepFilter: new STEP,
@@ -558,6 +559,10 @@ export default {
         },
       ],
       reloadTree: "",
+      newCreateTime: 0,
+      oldCreateTime: 0,
+      oldUserName: '',
+      debugReportId: ""
     }
   },
   created() {
@@ -744,6 +749,8 @@ export default {
         if (item && map.has(item.resourceId)) {
           item.domain = map.get(item.resourceId);
           item.resourceId = getUUID();
+        }else{
+          item.domain = "";
         }
         if (item && item.hashTree && item.hashTree.length > 0) {
           this.margeDomain(item.hashTree, map);
@@ -811,9 +818,6 @@ export default {
         try {
           if (this.messageWebSocket) {
             this.messageWebSocket.close();
-          }
-          if (this.websocket) {
-            this.websocket.close();
           }
           this.clearNodeStatus(this.$refs.stepTree.root.childNodes);
           this.clearDebug();
@@ -898,8 +902,11 @@ export default {
       }
     },
     initMessageSocket() {
-      this.messageWebSocket = getReportMessageSocket(this.reportId);
+      this.debugReportId = getUUID().substring(0, 8);
+      this.messageWebSocket = getReportMessageSocket(this.debugReportId);
       this.messageWebSocket.onmessage = this.onDebugMessage;
+      // 开始执行
+      this.messageWebSocket.onopen = this.run();
     },
     runningEditParent(node) {
       if (node.parent && node.parent.data && node.parent.data.id) {
@@ -1128,15 +1135,39 @@ export default {
       }
     },
     addComponent(type, plugin) {
-      setComponent(type, this, plugin);
+      let isAssertions = false;
+      if (type === 'Assertions') {
+        this.scenarioDefinition.forEach(item => {
+          if (item.type === type) {
+            item.active = true;
+            isAssertions = true;
+            this.reloadTree = getUUID();
+          }
+        })
+        if (!isAssertions) {
+          setComponent(type, this, plugin);
+          for (let i in this.scenarioDefinition) {
+            if (this.scenarioDefinition[i].type === "Assertions") {
+              this.scenarioDefinition[i].active = true;
+              let assertions = this.scenarioDefinition[i];
+              this.scenarioDefinition.splice(i, 1);
+              this.scenarioDefinition.unshift(assertions);
+              this.sort();
+            }
+          }
+        }
+      } else {
+        setComponent(type, this, plugin);
+      }
     },
+
     nodeClick(data, node) {
       if ((data.referenced != 'REF' && data.referenced != 'Deleted' && !data.disabled && this.stepFilter) || data.refType === 'CASE') {
         this.operatingElements = this.stepFilter.get(data.type);
       } else {
         this.operatingElements = [];
       }
-      if (!this.operatingElements && this.stepFilter) {
+      if ((!this.operatingElements && this.stepFilter)|| this.stepFilter.get("AllSamplerProxy").indexOf(data.type) !== -1) {
         this.operatingElements = this.stepFilter.get("ALL");
       }
       this.selectedTreeNode = data;
@@ -1206,9 +1237,14 @@ export default {
     addCustomizeApi(request) {
       this.customizeVisible = false;
       request.enable === undefined ? request.enable = true : request.enable;
-      if (this.selectedTreeNode !== undefined) {
-        this.selectedTreeNode.hashTree.push(request);
-      } else {
+      if(this.selectedTreeNode !== undefined){
+        if(this.stepFilter.get("AllSamplerProxy").indexOf(this.selectedTreeNode.type) !== -1){
+          this.scenarioDefinition.splice(this.selectedTreeNode.index,0,request);
+          this.$store.state.forceRerenderIndex = getUUID();
+        }else{
+          this.selectedTreeNode.hashTree.push(request) ;
+        }
+      }else{
         this.scenarioDefinition.push(request);
       }
       this.customizeRequest = {};
@@ -1229,9 +1265,14 @@ export default {
           this.resetResourceId(item.hashTree);
           item.enable === undefined ? item.enable = true : item.enable;
           item.variableEnable = item.variableEnable === undefined ? true : item.variableEnable;
-          if (this.selectedTreeNode !== undefined) {
-            this.selectedTreeNode.hashTree.push(item);
-          } else {
+          if(this.selectedTreeNode !== undefined){
+            if(this.stepFilter.get("AllSamplerProxy").indexOf(this.selectedTreeNode.type) !== -1){
+              this.scenarioDefinition.splice(this.selectedTreeNode.index,0,item);
+              this.$store.state.forceRerenderIndex = getUUID();
+            }else{
+              this.selectedTreeNode.hashTree.push(item) ;
+            }
+          }else{
             this.scenarioDefinition.push(item);
           }
         })
@@ -1265,6 +1306,7 @@ export default {
       request.versionEnable = item.versionEnable;
       request.versionId = item.versionId;
       request.versionName = item.versionName;
+      request.domain = "";
       request.requestResult = [];
       if (!request.url) {
         request.url = "";
@@ -1275,9 +1317,14 @@ export default {
       if (referenced === 'REF' && request.hashTree) {
         this.recursiveSorting(request.hashTree);
       }
-      if (this.selectedTreeNode !== undefined) {
-        this.selectedTreeNode.hashTree.push(request);
-      } else {
+      if(this.selectedTreeNode !== undefined){
+        if(this.stepFilter.get("AllSamplerProxy").indexOf(this.selectedTreeNode.type) !== -1){
+          this.scenarioDefinition.splice(this.selectedTreeNode.index,0,request);
+          this.$store.state.forceRerenderIndex = getUUID();
+        }else{
+          this.selectedTreeNode.hashTree.push(request) ;
+        }
+      }else{
         this.scenarioDefinition.push(request);
       }
     },
@@ -1357,6 +1404,9 @@ export default {
         this.$store.state.forceRerenderIndex = getUUID();
       });
     },
+    run() {
+      this.reportId = this.debugReportId;
+    },
     runDebug(runScenario) {
       if (this.scenarioDefinition.length < 1) {
         return;
@@ -1408,9 +1458,10 @@ export default {
           } else {
             this.debugLoading = true;
           }
-          this.reportId = getUUID().substring(0, 8);
           this.debug = true;
           this.pluginDelStep = false;
+          // 建立消息链接
+          this.initMessageSocket();
         } else {
           this.clearMessage = getUUID().substring(0, 8);
         }
@@ -1423,16 +1474,6 @@ export default {
           this.environments.forEach(environment => {
             parseEnvironment(environment);
           });
-          let hasEnvironment = false;
-          for (let i in this.environments) {
-            if (this.environments[i].id === this.currentEnvironmentId) {
-              hasEnvironment = true;
-              break;
-            }
-          }
-          if (!hasEnvironment) {
-            this.currentEnvironmentId = '';
-          }
           //检查场景是否需要先进行保存
           this.checkDataIsCopy();
         });
@@ -1510,10 +1551,33 @@ export default {
                 if (this.currentScenario.tags instanceof String) {
                   this.currentScenario.tags = JSON.parse(this.currentScenario.tags);
                 }
+                if (this.currentScenario.copy) {
+                  this.currentScenario.copy = null;
+                }
+                if (this.currentScenario.type) {
+                  this.currentScenario.type = null;
+                }
                 this.pluginDelStep = false;
+                // 记录改变后的数据数据
+                let v1 = {
+                  apiScenarioModuleId: this.currentScenario.apiScenarioModuleId,
+                  name: this.currentScenario.name,
+                  status: this.currentScenario.status,
+                  principal: this.currentScenario.principal,
+                  level: this.currentScenario.level,
+                  tags: this.currentScenario.tags,
+                  description: this.currentScenario.description,
+                  scenarioDefinition: JSON.parse(JSON.stringify(this.scenarioDefinition))
+                };
+                this.currentScenario.scenarioDefinitionOrg = v1;
+                this.currentScenario.scenarioDefinition = this.scenarioDefinition;
                 this.$emit('refresh', this.currentScenario);
                 resolve();
               });
+            } else {
+              if (this.$refs.versionHistory) {
+                this.$refs.versionHistory.loading = false;
+              }
             }
           })
         }
@@ -1550,21 +1614,25 @@ export default {
       if (!this.currentScenario.headers) {
         this.currentScenario.headers = [];
       }
-      if (this.currentScenario.id) {
+      if (this.currentScenario && this.currentScenario.id) {
         this.result = this.$get("/api/automation/getApiScenario/" + this.currentScenario.id, response => {
           if (response.data) {
             this.path = "/api/automation/update";
             if (response.data.scenarioDefinition != null) {
               let obj = JSON.parse(response.data.scenarioDefinition);
               if (obj) {
-                this.currentEnvironmentId = obj.environmentId;
                 if (response.data.environmentJson) {
                   this.projectEnvMap = objToStrMap(JSON.parse(response.data.environmentJson));
                 } else {
                   // 兼容历史数据
                   this.projectEnvMap.set(this.projectId, obj.environmentId);
                 }
-                this.$store.state.scenarioEnvMap = this.projectEnvMap;
+                if (!this.$store.state.scenarioEnvMap || !(this.$store.state.scenarioEnvMap instanceof Map)) {
+                  this.$store.state.scenarioEnvMap = new Map();
+                }
+                this.projectEnvMap.forEach((v, k) => {
+                  this.$store.state.scenarioEnvMap.set(this.currentScenario.id + "_" + k, v);
+                })
                 this.envGroupId = response.data.environmentGroupId;
                 if (response.data.environmentType) {
                   this.environmentType = response.data.environmentType;
@@ -1594,7 +1662,7 @@ export default {
                 } else {
                   this.onSampleError = obj.onSampleError;
                 }
-                this.dataProcessing(obj.hashTree);
+                this.dataProcessing(obj.hashTree, obj);
                 this.scenarioDefinition = obj.hashTree;
               }
             }
@@ -1615,10 +1683,10 @@ export default {
           this.sort();
           this.$nextTick(() => {
             this.cancelBatchProcessing();
-            if (isRefresh) {
-              this.reloadTree = getUUID();
-            }
           });
+          if (isRefresh) {
+            this.reloadTree = getUUID();
+          }
           // 记录初始化数据
           let v1 = {
             apiScenarioModuleId: this.currentScenario.apiScenarioModuleId,
@@ -1636,9 +1704,21 @@ export default {
         })
       }
     },
-    dataProcessing(stepArray) {
+    dataProcessing(stepArray, obj) {
       if (stepArray) {
         for (let i in stepArray) {
+          if (stepArray[i].type === "Assertions") {
+            hisDataProcessing(stepArray, obj)
+            let assertions = stepArray[i];
+            stepArray.splice(i, 1);
+            stepArray.unshift(assertions);
+            this.sort();
+          }
+          let typeArray = ["JDBCPostProcessor", "JDBCSampler", "JDBCPreProcessor"]
+          if (typeArray.indexOf(stepArray[i].type) !== -1) {
+            stepArray[i].originalDataSourceId = stepArray[i].dataSourceId;
+            stepArray[i].originalEnvironmentId = stepArray[i].environmentId;
+          }
           if (!stepArray[i].hashTree) {
             stepArray[i].hashTree = [];
           }
@@ -1649,7 +1729,7 @@ export default {
             };
           }
           if (stepArray[i].hashTree.length > 0) {
-            this.dataProcessing(stepArray[i].hashTree);
+            this.dataProcessing(stepArray[i].hashTree, stepArray[i]);
           }
         }
       }
@@ -1716,8 +1796,6 @@ export default {
       if (!this.debug) {
         this.debugVisible = true;
         this.loading = false;
-      } else {
-        this.initMessageSocket();
       }
     },
     errorRefresh(error) {
@@ -1758,7 +1836,15 @@ export default {
     },
     setProjectEnvMap(projectEnvMap) {
       this.projectEnvMap = projectEnvMap;
-      this.$store.state.scenarioEnvMap = projectEnvMap;
+      if (!this.$store.state.scenarioEnvMap) {
+        this.$store.state.scenarioEnvMap = new Map();
+      }
+      let map = objToStrMap(JSON.parse(JSON.stringify(this.$store.state.scenarioEnvMap)));
+      this.projectEnvMap.forEach((v, k) => {
+        let key = this.currentScenario.id + "_" + k;
+        map.set(key, v);
+      });
+      this.$store.state.scenarioEnvMap = map;
       this.setDomain(true);
     },
     setEnvGroup(id) {
@@ -1818,19 +1904,15 @@ export default {
       return [];
     },
     checkALevelChecked() {
+      let resourceIds = [];
       if (this.$refs.stepTree) {
-        let resourceIds = [];
         this.$refs.stepTree.root.childNodes.forEach(item => {
           if (item.checked) {
             resourceIds.push(item.data.resourceId);
           }
         })
-        if (resourceIds.length > 20) {
-          this.$warning(this.$t('api_test.automation.open_check_message'));
-          return false;
-        }
       }
-      return true;
+      return resourceIds;
     },
     recursionExpansion(resourceIds, array) {
       if (array) {
@@ -1850,11 +1932,15 @@ export default {
     },
     openExpansion() {
       this.expandedStatus = true;
-      if (this.checkALevelChecked()) {
-        let resourceIds = this.getAllResourceIds();
-        this.changeNodeStatus(resourceIds, this.scenarioDefinition);
-        this.recursionExpansion(resourceIds, this.$refs.stepTree.root.childNodes);
+      let resourceIds = [];
+      let openResourceIds = this.checkALevelChecked();
+      if (openResourceIds.length > 20) {
+        resourceIds = openResourceIds.slice(0, 20);
+      } else {
+        resourceIds = this.getAllResourceIds();
       }
+      this.changeNodeStatus(resourceIds, this.scenarioDefinition);
+      this.recursionExpansion(resourceIds, this.$refs.stepTree.root.childNodes);
     },
     closeExpansion() {
       this.expandedStatus = false;
@@ -1958,6 +2044,9 @@ export default {
     compare(row) {
       this.scenarioRefId = this.currentScenario.refId;
       this.dffScenarioId = row.id;
+      this.newCreateTime = row.createTime
+      this.oldUserName = this.currentScenario.userName
+      this.oldCreateTime = this.$refs.versionHistory.versionOptions.filter(v => v.id === this.currentScenario.versionId)[0].createTime;
       this.dialogVisible = true;
     },
     closeDiff() {

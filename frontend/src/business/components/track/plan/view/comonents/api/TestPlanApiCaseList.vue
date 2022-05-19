@@ -6,6 +6,7 @@
           :project-id="getProjectId()"
           :condition="condition"
           :plan-id="planId"
+          :plan-status="planStatus"
           @refresh="initTable"
           @relevanceCase="$emit('relevanceCase')"
           @setEnvironment="setEnvironment"
@@ -186,7 +187,6 @@ import MsBottomContainer from "../../../../../api/definition/components/BottomCo
 import BatchEdit from "@/business/components/track/case/components/BatchEdit";
 import {API_METHOD_COLOUR, CASE_PRIORITY, RESULT_MAP} from "../../../../../api/definition/model/JsonData";
 import {getCurrentProjectID, hasLicense, strMapToObj} from "@/common/js/utils";
-import ApiListContainer from "../../../../../api/definition/components/list/ApiListContainer";
 import PriorityTableItem from "../../../../common/tableItems/planview/PriorityTableItem";
 import {getUUID} from "../../../../../../../common/js/utils";
 import TestPlanCaseListHeader from "./TestPlanCaseListHeader";
@@ -195,7 +195,7 @@ import TestPlanApiCaseResult from "./TestPlanApiCaseResult";
 import {TEST_PLAN_API_CASE} from "@/common/js/constants";
 import {
   buildBatchParam,
-  checkTableRowIsSelect, deepClone, getCustomTableHeader, getCustomTableWidth,
+   deepClone, getCustomTableHeader, getCustomTableWidth,
 } from "@/common/js/tableUtils";
 import HeaderCustom from "@/business/components/common/head/HeaderCustom";
 import HeaderLabelOperate from "@/business/components/common/head/HeaderLabelOperate";
@@ -223,7 +223,6 @@ export default {
     TestPlanCaseListHeader,
     ApiCaseList,
     PriorityTableItem,
-    ApiListContainer,
     MsTablePagination,
     MsTag,
     MsApiCaseList,
@@ -252,20 +251,22 @@ export default {
         {
           tip: this.$t('api_test.run'), icon: "el-icon-video-play",
           exec: this.singleRun,
-          class: 'run-button',
+          class: this.planStatus==='Archived'?'disable-run':'run-button',
+          isDisable: this.planStatus==='Archived',
           permissions: ['PROJECT_TRACK_PLAN:READ+RUN']
         },
         {
           tip: this.$t('test_track.plan_view.cancel_relevance'), icon: "el-icon-unlock",
           exec: this.handleDelete,
           type: 'danger',
+          isDisable: this.planStatus==='Archived',
           permissions: ['PROJECT_TRACK_PLAN:READ+RELEVANCE_OR_CANCEL']
         }
       ],
       buttons: [
-        {name: this.$t('test_track.case.batch_unlink'), handleClick: this.handleDeleteBatch, permissions: ['PROJECT_TRACK_PLAN:READ+CASE_BATCH_DELETE']},
-        {name: this.$t('api_test.automation.batch_execute'), handleClick: this.handleBatchExecute, permissions: ['PROJECT_TRACK_PLAN:READ+CASE_BATCH_RUN']},
-        {name: this.$t('test_track.case.batch_edit_case'), handleClick: this.handleBatchEdit, permissions: ['PROJECT_TRACK_PLAN:READ+CASE_BATCH_EDIT']}
+        {name: this.$t('test_track.case.batch_unlink'), handleClick: this.handleDeleteBatch, isDisable: this.planStatus==='Archived', permissions: ['PROJECT_TRACK_PLAN:READ+CASE_BATCH_DELETE']},
+        {name: this.$t('api_test.automation.batch_execute'), handleClick: this.handleBatchExecute, isDisable: this.planStatus==='Archived', permissions: ['PROJECT_TRACK_PLAN:READ+CASE_BATCH_RUN']},
+        {name: this.$t('test_track.case.batch_edit_case'), handleClick: this.handleBatchEdit,  isDisable: this.planStatus==='Archived', permissions: ['PROJECT_TRACK_PLAN:READ+CASE_BATCH_EDIT']}
       ],
       typeArr: [
         {id: 'projectEnv', name: this.$t('api_test.definition.request.run_env')},
@@ -327,6 +328,7 @@ export default {
       }
     },
     planId: String,
+    planStatus: String,
     reviewId: String,
     clickType: String,
     versionEnable: Boolean,

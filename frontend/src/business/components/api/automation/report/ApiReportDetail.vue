@@ -1,6 +1,6 @@
 <template>
   <ms-container v-loading="loading">
-    <ms-main-container>
+    <ms-main-container class="api-report-content">
       <el-card>
         <section class="report-container" v-if="this.report.testId">
           <ms-api-report-view-header :show-cancel-button="showCancelButton" :is-plan="isPlan" :is-template="isTemplate"
@@ -13,14 +13,19 @@
             <div>
               <el-tabs v-model="activeName" @tab-click="handleClick">
                 <el-tab-pane :label="$t('api_report.total')" name="total">
-                  <ms-scenario-results :treeData="fullTreeNodes" :console="content.console"
-                                       v-on:requestResult="requestResult" ref="resultsTree"/>
+                  <ms-scenario-results :treeData="fullTreeNodes"
+                                       :console="content.console"
+                                       :report="report"
+                                       v-on:requestResult="requestResult"
+                                       ref="resultsTree"/>
                 </el-tab-pane>
                 <el-tab-pane name="fail">
                   <template slot="label">
                     <span class="fail">{{ $t('api_report.fail') }}</span>
                   </template>
-                  <ms-scenario-results v-on:requestResult="requestResult" :console="content.console"
+                  <ms-scenario-results v-on:requestResult="requestResult"
+                                       :console="content.console"
+                                       :report="report"
                                        :treeData="fullTreeNodes" ref="failsTree"
                                        :errorReport="content.error"/>
                 </el-tab-pane>
@@ -28,14 +33,20 @@
                   <template slot="label">
                     <span class="fail" style="color: #F6972A">{{ $t('error_report_library.option.name') }}</span>
                   </template>
-                  <ms-scenario-results v-on:requestResult="requestResult" :console="content.console"
+                  <ms-scenario-results v-on:requestResult="requestResult"
+                                       :report="report"
+                                       :console="content.console"
                                        :treeData="fullTreeNodes" ref="errorReportTree"/>
                 </el-tab-pane>
                 <el-tab-pane name="unExecute" v-if="content.unExecute > 0">
                   <template slot="label">
-                    <span class="fail" style="color: #9C9B9A">{{ $t('api_test.home_page.detail_card.unexecute') }}</span>
+                    <span class="fail" style="color: #9C9B9A">{{
+                        $t('api_test.home_page.detail_card.unexecute')
+                      }}</span>
                   </template>
-                  <ms-scenario-results v-on:requestResult="requestResult" :console="content.console"
+                  <ms-scenario-results v-on:requestResult="requestResult"
+                                       :report="report"
+                                       :console="content.console"
                                        :treeData="fullTreeNodes" ref="unExecuteTree"/>
                 </el-tab-pane>
                 <el-tab-pane name="console">
@@ -70,7 +81,7 @@ import MsApiReportExport from "./ApiReportExport";
 import MsApiReportViewHeader from "./ApiReportViewHeader";
 import {RequestFactory} from "../../definition/model/ApiTestModel";
 import {windowPrint, getUUID, getCurrentProjectID} from "@/common/js/utils";
-import {getScenarioReport, getShareScenarioReport} from "@/network/api";
+import {getScenarioReport, getScenarioReportAll, getShareScenarioReport} from "@/network/api";
 import {STEP} from "@/business/components/api/automation/scenario/Setting";
 import MsCodeEdit from "@/business/components/common/components/MsCodeEdit";
 
@@ -100,6 +111,7 @@ export default {
       requestType: undefined,
       fullTreeNodes: [],
       stepFilter: new STEP,
+      exportReportIsOk: false,
     }
   },
   activated() {
@@ -130,7 +142,7 @@ export default {
       if (this.isTemplate) {
         this.getReport();
       }
-    }
+    },
   },
   methods: {
     filter(index) {
@@ -138,7 +150,7 @@ export default {
         this.$refs.failsTree.filter(index);
       } else if (this.activeName === "errorReport") {
         this.$refs.errorReportTree.filter("errorReport");
-      } else if(this.activeName === "unExecute"){
+      } else if (this.activeName === "unExecute") {
         this.$refs.unExecuteTree.filter("unexecute");
       }
     },
@@ -330,17 +342,32 @@ export default {
         }
       }
     },
-    getReport() {
+    getReport(getAllReport) {
       this.init();
       if (this.isTemplate) {
         // 测试计划报告导出
-        this.report = this.templateReport;
-        this.buildReport();
+        if (this.templateReport) {
+          this.handleGetScenarioReport(this.templateReport);
+        } else {
+          this.report = this.templateReport;
+          this.buildReport();
+        }
       } else if (this.isShare) {
         getShareScenarioReport(this.shareId, this.reportId, (data) => {
           this.checkReport(data);
           this.handleGetScenarioReport(data);
         });
+      } else if (getAllReport) {
+        if (this.exportReportIsOk) {
+          this.startExport();
+        } else {
+          getScenarioReportAll(this.reportId, (data) => {
+            this.checkReport(data);
+            this.handleGetScenarioReport(data);
+            this.exportReportIsOk = true;
+            this.startExport();
+          });
+        }
       } else {
         getScenarioReport(this.reportId, (data) => {
           this.checkReport(data);
@@ -470,7 +497,7 @@ export default {
     formatExportApi(array, scenario) {
       array.forEach(item => {
         if (this.stepFilter && this.stepFilter.get("AllSamplerProxy").indexOf(item.type) !== -1) {
-          if(item.errorCode){
+          if (item.errorCode) {
             item.value.errorCode = item.errorCode;
           }
           scenario.requestResults.push(item.value);
@@ -480,7 +507,11 @@ export default {
         }
       })
     },
+
     handleExport() {
+      this.getReport(true);
+    },
+    startExport() {
       if (this.report.reportVersion && this.report.reportVersion > 1) {
         if (this.report.reportType === 'API_INTEGRATED' || this.report.reportType === 'UI_INTEGRATED') {
           let scenario = {name: "", requestResults: []};
@@ -527,13 +558,19 @@ export default {
     },
     exportReportReset() {
       this.$router.go(0);
-    }
+    },
+    handleProjectChange() {
+      this.$router.push('/api/automation/report');
+    },
   },
 
   created() {
     this.getReport();
+    this.$EventBus.$on('projectChange', this.handleProjectChange);
   },
-
+  destroyed() {
+    this.$EventBus.$off('projectChange', this.handleProjectChange);
+  },
   computed: {
     path() {
       return "/api/test/edit?id=" + this.report.testId;

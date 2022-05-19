@@ -42,6 +42,7 @@ public class JmeterDocumentParser implements EngineSourceParser {
     private final static String BACKEND_LISTENER = "BackendListener";
     private final static String CONFIG_TEST_ELEMENT = "ConfigTestElement";
     private final static String ARGUMENTS = "Arguments";
+    private final static String KEYSTORE_CONFIG = "KeystoreConfig";
     private final static String RESPONSE_ASSERTION = "ResponseAssertion";
     private final static String HTTP_SAMPLER_PROXY = "HTTPSamplerProxy";
     private final static String CSV_DATA_SET = "CSVDataSet";
@@ -109,6 +110,8 @@ public class JmeterDocumentParser implements EngineSourceParser {
                     processAutoStopListener(ele);
                 } else if (nodeNameEquals(ele, HTTP_SAMPLER_PROXY)) {
                     // 处理http上传的附件
+                    processArgumentFiles(ele);
+                } else if (nodeNameEquals(ele, KEYSTORE_CONFIG)) {
                     processArgumentFiles(ele);
                 }
 
@@ -186,37 +189,41 @@ public class JmeterDocumentParser implements EngineSourceParser {
 
     private void processArgumentFiles(Element element) {
         List<Element> childNodes = element.elements();
+        if (childNodes.size() == 0) {
+            return;
+        }
         for (Element item : childNodes) {
-            if (isHTTPFileArgs(item)) {
-                List<Element> elementProps = item.elements();
-                for (Element eleProp : elementProps) {
-                    List<Element> strProps = eleProp.elements();
-                    for (Element strPop : strProps) {
-                        if (StringUtils.equals(strPop.attributeValue("name"), "File.path")) {
-                            // 截取文件名
-                            handleFilename(strPop);
-                            break;
-                        }
-                    }
-                }
-
-
+            processArgumentFiles(item);
+            if (StringUtils.equals(item.attributeValue("name"), "File.path")) {
+                // 截取文件名
+                handleFilename(item);
+            }
+            if (StringUtils.equals(item.attributeValue("elementType"), "HTTPFileArg")) {
+                // 截取文件名
+                String filename = item.attributeValue("name");
+                filename = extractFilename(filename);
+                item.addAttribute("name", filename);
+            }
+            if (StringUtils.equals("MS-KEYSTORE-FILE-PATH", item.attributeValue("name"))) {
+                handleFilename(item);
             }
         }
     }
 
-    private void handleFilename(Node item) {
+    private String extractFilename(String filename) {
         String separator = "/";
-        String filename = item.getText();
         if (!StringUtils.contains(filename, "/")) {
             separator = "\\";
         }
-        filename = filename.substring(filename.lastIndexOf(separator) + 1);
-        item.setText(filename);
+        // 改成绝对路径，keystore 不能使用相对路径
+        filename = "/test/" + filename.substring(filename.lastIndexOf(separator) + 1);
+        return filename;
     }
 
-    private boolean isHTTPFileArgs(Element ele) {
-        return "HTTPFileArgs".equals(ele.attributeValue("elementType"));
+    private void handleFilename(Node item) {
+        String filename = item.getText();
+        filename = extractFilename(filename);
+        item.setText(filename);
     }
 
     private void processCsvDataSet(Element element) {
@@ -237,6 +244,7 @@ public class JmeterDocumentParser implements EngineSourceParser {
 
     private void splitCsvFile(Node item) {
         String filename = item.getText();
+        filename = StringUtils.removeStart(filename, "/test/");
         // 已经分割过的不再二次分割
         if (BooleanUtils.toBoolean(context.getSplitFlag().get(filename))) {
             return;

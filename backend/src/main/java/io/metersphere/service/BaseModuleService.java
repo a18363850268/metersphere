@@ -94,11 +94,13 @@ public class BaseModuleService extends NodeTreeService<ModuleNodeDTO> {
             TestCaseNodeExample.Criteria criteria = example.createCriteria();
             criteria.andNameEqualTo(node.getName())
                     .andProjectIdEqualTo(node.getProjectId());
+
             if (StringUtils.isNotBlank(node.getParentId())) {
                 criteria.andParentIdEqualTo(node.getParentId());
             } else {
-                criteria.andParentIdIsNull();
+                criteria.andLevelEqualTo(node.getLevel());
             }
+
             if (StringUtils.isNotBlank(node.getId())) {
                 criteria.andIdNotEqualTo(node.getId());
             }
@@ -147,8 +149,15 @@ public class BaseModuleService extends NodeTreeService<ModuleNodeDTO> {
         return getNodeTreeByProjectIdWithCount(projectId, null, defaultName);
     }
 
-    private void buildNodeCount(String projectId, List<ModuleNodeDTO> moduleNodes, Function<QueryNodeRequest, List<Map<String, Object>>> getModuleCountFunc) {
-        QueryNodeRequest request = new QueryNodeRequest();
+    protected void buildNodeCount(String projectId, List<ModuleNodeDTO> moduleNodes, Function<QueryNodeRequest, List<Map<String, Object>>> getModuleCountFunc) {
+        this.buildNodeCount(projectId, moduleNodes, getModuleCountFunc, null);
+    }
+
+    protected void buildNodeCount(String projectId, List<ModuleNodeDTO> moduleNodes, Function<QueryNodeRequest, List<Map<String, Object>>> getModuleCountFunc,
+                                QueryNodeRequest request) {
+        if (request == null) {
+            request = new QueryNodeRequest();
+        }
         request.setProjectId(projectId);
 
         //优化：将for循环内的SQL抽出来，只查一次
@@ -575,12 +584,9 @@ public class BaseModuleService extends NodeTreeService<ModuleNodeDTO> {
         TestCaseNodeExample example = new TestCaseNodeExample();
         TestCaseNodeExample.Criteria criteria = example.createCriteria();
         criteria.andNameEqualTo(node.getName())
-                .andProjectIdEqualTo(node.getProjectId());
-        if (StringUtils.isNotBlank(node.getParentId())) {
-            criteria.andParentIdEqualTo(node.getParentId());
-        } else {
-            criteria.andParentIdIsNull();
-        }
+                .andProjectIdEqualTo(node.getProjectId())
+                .andLevelEqualTo(node.getLevel());
+
         if (StringUtils.isNotBlank(node.getId())) {
             criteria.andIdNotEqualTo(node.getId());
         }

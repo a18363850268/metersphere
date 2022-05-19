@@ -36,7 +36,7 @@ export default {
     close_schedule: 'Close Schedule',
     open_schedule: 'Start Schedule',
     schedule_switch: 'Schedule Switch',
-    schedule_cron_title: 'Schedule Time Expression',
+    schedule_cron_title: 'Cron Expression',
     review_complete: 'Review Completed',
     examples: 'examples',
     help_documentation: 'Help',
@@ -45,8 +45,8 @@ export default {
     delete_cancelled: 'Delete cancelled',
     option_cannot_spread_pages: 'This options not support spread pages.Do you want continue?',
     workspace: 'Workspace',
-    space:'Space',
-    current_workspace:"Current Workspace",
+    space: 'Space',
+    current_workspace: "Current Workspace",
     organization: 'Organization',
     setting: 'Setting',
     project: 'Project',
@@ -74,6 +74,7 @@ export default {
     actuator: 'Actuator',
     confirm_info: 'Not saved, are you sure to close?',
     prompt: 'Prompt',
+    task_center_remark: 'The debugging history only shows the last five pieces of data',
     operating: 'Operating',
     input_limit: 'Within {0} and {1} characters',
     login: 'Sign In',
@@ -108,6 +109,7 @@ export default {
     personal_setting: 'Personal Setting',
     api_keys: 'API Keys',
     third_account: 'Third Account',
+    ui_setting: 'UI Setting',
     quota: 'Quota',
     test_resource_pool: 'Resource Pool',
     system_setting: 'Settings',
@@ -117,6 +119,7 @@ export default {
     follow_api: 'Follow API definition',
     response_time_delay: 'Response delay time',
     my_workstation: 'MyWorkstation',
+    ui_test: 'UiTest',
     performance: 'Performance',
     enable_settings: 'Enable Settings',
     view_settings: 'View Settings',
@@ -444,6 +447,7 @@ export default {
     delete_all_version: 'All versions',
     change_password_tips: 'Your password is the initial system password, please change it as soon as possible',
     ui: 'UI TEST',
+    not_eligible_for_deletion:'Not Eligible For Deletion'
   },
   login: {
     normal_Login: "Normal Login",
@@ -462,6 +466,7 @@ export default {
     status: 'Valid State',
     valid: 'Valid',
     invalid: 'invalid',
+    count_warning: 'The number of system users has exceeded the license limit. Please contact the staff as soon as possible.',
     expired: 'expired',
   },
   workstation: {
@@ -603,6 +608,8 @@ export default {
       env_list: "Environment List",
       confirm: "Confirm",
       please_select_env_for_current_scenario: "please select env for current scenario",
+      please_select_env_for_current_plan: "please select env for current plan",
+      please_select_run_within_resource_pool: "Please select a resource pool",
       lack_env: "Environment group is missing environment！",
       lack_necessary_environment: "This environment group lacks the necessary project environment！",
       available_group: 'available',
@@ -638,6 +645,7 @@ export default {
       nail_robot: 'Nail robot',
       enterprise_wechat_robot: 'WeCom robot',
       lark: "Lark Robot",
+      webhook: 'Webhook',
       notes: '1. In order to use WeChat Enterprise, Dingding and Feishu notifications, you need to create a custom robot and copy the webhook address;<br/>' +
         '2. For robots that need security verification, you can choose "custom keyword" verification, and the keyword is "Message Notification";<br/>' +
         '3. To use the @ feature, the selected recipient must be a user included in the group, the recipient’s phone number is required and should be the phone number used by Dingding.',
@@ -896,6 +904,7 @@ export default {
     permission: 'Permission',
     please_select_group: 'Please Select Group',
     global: 'Global',
+    unable_to_remove_current_member: 'Unable to remove currently logged in user!',
     ws_admin_global: 'Only workspace administrators can create global user groups'
   },
   role: {
@@ -1127,6 +1136,7 @@ export default {
     please_select_case: "Please select case",
     fail_to_stop: "Fail to stop",
     batch_add_parameter: "Format: parameter name: parameter value <br/> like：Accept-Encoding:utf-8",
+    create_performance_test_tips: 'This operation cannot be completed without permission to create performance tests',
     jar_config: {
       title: "Upload jar package",
       jar_file: "Jar Package",
@@ -1245,6 +1255,7 @@ export default {
         delete_case_confirm: "Confirm case deletion",
         delete_confirm_step: "Confirm deletion step",
         assertions_rule: "Assertion rule",
+        scenario_assertions: "Scenario assertion rule",
         pre_operation: "Pre operation",
         post_operation: "Post operation",
         response_header: "Response header",
@@ -1608,6 +1619,7 @@ export default {
         debug_first: "First, debug to get the response",
         suggest_tip: "Click the note to add the JSONPath assertion",
         regex_info: 'Special characters "$ () * +. [] \\ ^ {} |" need to be escaped as "\\ "+"special characters", such as "\\$"',
+        xpath_info: 'Select the extraction method according to the content format of the request response',
         regular_match: 'Regular match',
         none: 'Do not verify []',
         value_eq: 'Value-equal to [value=]',
@@ -2446,6 +2458,10 @@ export default {
     usage: 'Usage',
     backend_listener: 'Backend Listener',
     batch_add_resource_tips: 'Format: IP, Port, Monitor, maximum concurrent number<br/>such as: 192.168.1.52,8082,9100,500',
+    k8s_sa_tips: 'Permissions required to use the K8S resource pool',
+    k8s_sa_download_tips: 'Download SA executable file',
+    k8s_deploy_type_tips: 'A DaemonSet or Deployment needs to be deployed to perform interface testing',
+    k8s_deploy_download_tips: 'Download the YAML executable file',
   },
   system_parameter_setting: {
     mailbox_service_settings: 'Mailbox Settings',
@@ -2464,6 +2480,7 @@ export default {
     account: 'Account cannot be empty',
     test_recipients: 'Test recipients',
     tip: 'Tip: use as test mail recipient only',
+    from_tip: 'Note: It must be the mailbox verified by the mail server, otherwise it is sent by SMTP account by default'
   },
   i18n: {
     home: 'Home',
@@ -2523,6 +2540,7 @@ export default {
     generate_expression: "Generate Expression",
     cron_expression_format_error: "Cron Expression Format Error",
     cron_expression_interval_short_error: "Interval time shorter than 3 minutes, please avoid running tests that take too long",
+    cron_expression_interval_error: "The interval cannot be less than 1 minute",
     cron: {
       seconds: "Seconds",
       minutes: "Minutes",
@@ -2558,13 +2576,13 @@ export default {
   },
   quota: {
     default: {
-      organization: "Organization Default Quota",
+      project: "Project Default Quota",
       workspace: "Workspace Default Quota",
     },
     api: "Number of interface tests",
     performance: "Number of performance tests",
     resource_pool: "Available test resource pool",
-    max_threads: "Maximum Concurrency",
+    max_threads: "Same Period Maximum Concurrency",
     duration: "Stress test duration(seconds)",
     use_default: "Default Quota",
     yes: "Yes",
@@ -2575,6 +2593,11 @@ export default {
     edit_quota_title: "{0} quota",
     workspace_quota_list: "Workspace quota list of {0}",
     unlimited: "Unlimited",
+    member: "Member",
+    project: "Project",
+    vum_total: "Total vum",
+    vum_used: "Used vum",
+    vum_tip: "vum (thread * duration): a concurrent user consumes 1 vum for one minute",
     clean: "Clean"
   },
   schema: {
@@ -2682,10 +2705,12 @@ export default {
     api_definition: "Api definition",
     api_definition_case: "Api definition case",
     api_automation: "Api automation",
+    api_automation_schedule: 'Api automation schedule',
     api_automation_report: "Test Report",
     track_test_case: "Test case",
     track_test_case_review: "Case review",
     track_test_plan: "Test plan",
+    track_test_plan_schedule: 'Test plan schedule',
     track_bug: "Defect management",
     track_report: "Report",
     performance_test: "Performance test",
@@ -2840,6 +2865,11 @@ export default {
       name: "Service",
       read: "READ",
       edit: "EDIT",
+    },
+    workspace_quota: {
+      name: "Quota",
+      read: "READ",
+      edit: "EDIT"
     },
     project_message: {
       name: "Message",
@@ -3035,12 +3065,27 @@ export default {
       create_performance: "CREATE PERFORMANCE",
       create_performance_batch: "BATCH CREATE PERFORMANCE",
       batch_copy: "BATCH COPY",
+      open_url_content: "According to the URL, open the specified operation page"
     },
     project_api_report: {
       name: "Report",
       read: "READ",
       delete: "DELETE",
       export: "EXPORT",
+    },
+    project_ui_report: {
+      name: "Report",
+      read: "READ",
+      delete: "DELETE",
+      share: "SHARE",
+    },
+    project_ui_element: {
+      name: "Element",
+      read: "READ",
+      create: "CREATE",
+      edit: "EDIT",
+      delete: "DELETE",
+      copy: "COPY",
     },
     project_performance_test: {
       name: "Test",
@@ -3087,6 +3132,7 @@ export default {
       api_keys: 'API Keys',
       edit_password: "EDIT PASSWORD",
       third_account: 'Third Account',
+      ui_setting: 'UI Setting',
     },
     other: {
       track: "Track",
@@ -3106,6 +3152,8 @@ export default {
     tips:"Tips: Use error report in \"Project Settings - Project environment-Assertions\"",
     use_error_report: "Use error code",
     use_desc: "In case of conflict between error code and error assertions, it is treated as error code",
+    conflict_with_success: "If request has error report and success assertion：",
+    conflict_with_error: "If request has error report and error assertion：",
     option: {
       name: "Err code",
       error_code: "Name",
@@ -3123,5 +3171,8 @@ export default {
     ui_automation: "UI Automation",
     ui_element: "UI Element Library",
     report: "Test Report",
+    ui_debug_mode: 'UI debugging mode',
+    ui_local_debug: 'local',
+    ui_server_debug: 'server',
   }
 };

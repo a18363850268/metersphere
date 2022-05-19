@@ -36,7 +36,7 @@
           </el-col>
           <el-col :span="12">
             <el-form-item :label="$t('api_test.request.tcp.port')" prop="port" label-width="60px">
-              <el-input-number v-model="request.port" controls-position="right" :min="0" :max="65535" size="small"/>
+              <el-input v-model="request.port" size="small"/>
             </el-form-item>
           </el-col>
         </el-row>
@@ -63,7 +63,7 @@ export default {
       this.isUrl = false;
       if (!this.request.path || this.request.path.indexOf('?') === -1) return;
       let url = this.getURL(this.addProtocol(this.request.path));
-      if (url && this.isUrl) {
+      if (url) {
         this.request.path = decodeURIComponent(this.request.path.substr(0, this.request.path.indexOf("?")));
       }
     },
@@ -76,7 +76,7 @@ export default {
         let url = this.getURL(this.addProtocol(this.request.url));
         if (url) {
           let paramUrl = this.request.url.substr(this.request.url.indexOf("?") + 1);
-          if (paramUrl && this.isUrl) {
+          if (paramUrl) {
             this.request.url = decodeURIComponent(this.request.url.substr(0, this.request.url.indexOf("?")));
           }
         }
@@ -93,12 +93,22 @@ export default {
     getURL(urlStr) {
       try {
         let url = new URL(urlStr);
-        url.searchParams.forEach((value, key) => {
-          if (key && value) {
-            this.isUrl = true;
-            this.request.arguments.splice(0, 0, new KeyValue({name: key, required: false, value: value}));
-          }
-        });
+        if (url.search && url.search.length > 1) {
+          let params = url.search.substr(1).split("&");
+          params.forEach(param => {
+            if (param) {
+              let keyValues = param.split("=");
+              if (keyValues) {
+                this.isUrl = true;
+                this.request.arguments.splice(0, 0, new KeyValue({
+                  name: keyValues[0],
+                  required: false,
+                  value: keyValues[1]
+                }));
+              }
+            }
+          });
+        }
         return url;
       } catch (e) {
         this.$error(this.$t('api_test.request.url_invalid'), 2000);

@@ -69,18 +69,32 @@ public class ApiDefinitionExecResultService {
     @Resource
     private SqlSessionFactory sqlSessionFactory;
 
-    public void saveApiResult(List<RequestResult> requestResults, ResultDTO dto) {
-        LoggerUtil.info("接收到API/CASE执行结果【 " + requestResults.size() + " 】");
 
-        for (RequestResult item : requestResults) {
+    public void saveApiResult(ResultDTO dto) {
+        LoggerUtil.info("接收到API/CASE执行结果【 " + dto.getRequestResults().size() + " 】条");
+
+        for (RequestResult item : dto.getRequestResults()) {
             if (item.getResponseResult() != null && item.getResponseResult().getResponseTime() <= 0) {
                 item.getResponseResult().setResponseTime((item.getEndTime() - item.getStartTime()));
             }
             if (!StringUtils.startsWithAny(item.getName(), "PRE_PROCESSOR_ENV_", "POST_PROCESSOR_ENV_")) {
                 ApiDefinitionExecResult result = this.editResult(item, dto.getReportId(), dto.getConsole(), dto.getRunMode(), dto.getTestId(), null);
                 if (result != null) {
+                    User user = null;
+                    if (MapUtils.isNotEmpty(dto.getExtendedParameters())) {
+                        if (dto.getExtendedParameters().containsKey("userId") && dto.getExtendedParameters().containsKey("userName")) {
+                            user = new User() {{
+                                this.setId(dto.getExtendedParameters().get("userId").toString());
+                                this.setName(dto.getExtendedParameters().get("userName").toString());
+                            }};
+                        } else if (dto.getExtendedParameters().containsKey("userId")) {
+                            result.setUserId(dto.getExtendedParameters().get("userId").toString());
+                        }
+                    }
                     // 发送通知
-                    sendNotice(result);
+                    result.setResourceId(dto.getTestId());
+                    LoggerUtil.info("执行结果【 " + result.getName() + " 】入库存储完成");
+                    sendNotice(result, user);
                 }
             }
         }
@@ -110,8 +124,13 @@ public class ApiDefinitionExecResultService {
                         );
 
                         if (result != null && !StringUtils.startsWithAny(dto.getRunMode(), "SCHEDULE")) {
+                            User user = null;
+                            if (MapUtils.isNotEmpty(dto.getExtendedParameters()) && dto.getExtendedParameters().containsKey("user") && dto.getExtendedParameters().get("user") instanceof User) {
+                                user = (User) dto.getExtendedParameters().get("user");
+                            }
                             // 发送通知
-                            sendNotice(result);
+                            result.setResourceId(dto.getTestId());
+                            sendNotice(result, user);
                         }
                     }
                 }
@@ -134,7 +153,7 @@ public class ApiDefinitionExecResultService {
         }
     }
 
-    private void sendNotice(ApiDefinitionExecResult result) {
+    private void sendNotice(ApiDefinitionExecResult result, User user) {
         try {
             String resourceId = result.getResourceId();
             ApiTestCaseWithBLOBs apiTestCaseWithBLOBs = apiTestCaseMapper.selectByPrimaryKey(resourceId);
@@ -153,12 +172,14 @@ public class ApiDefinitionExecResultService {
                 event = NoticeConstants.Event.EXECUTE_FAILED;
                 status = "失败";
             }
-            User user = null;
-            if (SessionUtils.getUser() != null && StringUtils.equals(SessionUtils.getUser().getId(), result.getUserId())) {
-                user = SessionUtils.getUser();
-            } else {
-                user = userMapper.selectByPrimaryKey(result.getUserId());
+            if (user == null) {
+                if (SessionUtils.getUser() != null && StringUtils.equals(SessionUtils.getUser().getId(), result.getUserId())) {
+                    user = SessionUtils.getUser();
+                } else {
+                    user = userMapper.selectByPrimaryKey(result.getUserId());
+                }
             }
+
             Map paramMap = new HashMap<>(beanMap);
             paramMap.put("operator", user != null ? user.getName() : result.getUserId());
             paramMap.put("status", result.getStatus());
@@ -167,8 +188,6 @@ public class ApiDefinitionExecResultService {
                     .operator(result.getUserId() != null ? result.getUserId() : SessionUtils.getUserId())
                     .context(context)
                     .subject("接口用例通知")
-                    .successMailTemplate("api/CaseResultSuccess")
-                    .failedMailTemplate("api/CaseResultFailed")
                     .paramMap(paramMap)
                     .event(event)
                     .build();
@@ -285,15 +304,19 @@ public class ApiDefinitionExecResultService {
      * 定时任务触发的保存逻辑
      * 定时任务时，userID要改为定时任务中的用户
      */
-    public void saveApiResultByScheduleTask(List<RequestResult> requestResults, ResultDTO dto) {
-        if (CollectionUtils.isNotEmpty(requestResults)) {
-            LoggerUtil.info("接收到定时任务执行结果【 " + requestResults.size() + " 】");
-            for (RequestResult item : requestResults) {
+    public void saveApiResultByScheduleTask(ResultDTO dto) {
+        if (CollectionUtils.isNotEmpty(dto.getRequestResults())) {
+            LoggerUtil.info("接收到API/CASE执行结果【 " + dto.getRequestResults().size() + " 】条");
+            for (RequestResult item : dto.getRequestResults()) {
+                LoggerUtil.info("执行结果【 " + item.getName() + " 】入库存储");
                 if (!StringUtils.startsWithAny(item.getName(), "PRE_PROCESSOR_ENV_", "POST_PROCESSOR_ENV_")) {
                     //对响应内容进行进一步解析。如果有附加信息（比如误报库信息），则根据附加信息内的数据进行其他判读
                     RequestResultExpandDTO expandDTO = ResponseUtil.parseByRequestResult(item);
 
                     ApiDefinitionExecResult reportResult = this.editResult(item, dto.getReportId(), dto.getConsole(), dto.getRunMode(), dto.getTestId(), null);
+                    if (MapUtils.isNotEmpty(dto.getExtendedParameters()) && dto.getExtendedParameters().containsKey("userId")) {
+                        reportResult.setUserId(String.valueOf(dto.getExtendedParameters().get("userId")));
+                    }
                     String status = item.isSuccess() ? "success" : "error";
                     if (reportResult != null) {
                         status = reportResult.getStatus();
@@ -317,12 +340,11 @@ public class ApiDefinitionExecResultService {
         }
         updateTestCaseStates(dto.getTestId());
         Map<String, String> apiIdResultMap = new HashMap<>();
-        long errorSize = requestResults.stream().filter(requestResult -> requestResult.getError() > 0).count();
-        String status = errorSize > 0 || requestResults.isEmpty() ? TestPlanApiExecuteStatus.FAILD.name() : TestPlanApiExecuteStatus.SUCCESS.name();
+        long errorSize = dto.getRequestResults().stream().filter(requestResult -> requestResult.getError() > 0).count();
+        String status = errorSize > 0 || dto.getRequestResults().isEmpty() ? TestPlanApiExecuteStatus.FAILD.name() : TestPlanApiExecuteStatus.SUCCESS.name();
         if (StringUtils.isNotEmpty(dto.getReportId())) {
             apiIdResultMap.put(dto.getReportId(), status);
         }
-        LoggerUtil.info("TestPlanReportId[" + dto.getTestPlanReportId() + "] APICASE OVER. API CASE STATUS:" + JSONObject.toJSONString(apiIdResultMap));
     }
 
 
@@ -423,15 +445,15 @@ public class ApiDefinitionExecResultService {
             RequestResultExpandDTO expandDTO = ResponseUtil.parseByRequestResult(item);
             String status = item.isSuccess() ? ExecuteResult.success.name() : ExecuteResult.error.name();
             if (MapUtils.isNotEmpty(expandDTO.getAttachInfoMap())) {
-                status = expandDTO.getStatus();
+                if (StringUtils.isNotEmpty(expandDTO.getStatus())) {
+                    status = expandDTO.getStatus();
+                }
                 saveResult.setContent(JSON.toJSONString(expandDTO));
             } else {
                 saveResult.setContent(JSON.toJSONString(item));
             }
             saveResult.setType(type);
-
             saveResult.setStatus(status);
-            saveResult.setResourceId(item.getName());
             saveResult.setStartTime(item.getStartTime());
             saveResult.setEndTime(item.getEndTime());
 

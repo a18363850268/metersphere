@@ -12,32 +12,32 @@
               <div class="el-step__icon-inner">1</div>
             </div>
             <span>{{ $t('schedule.edit_timer_task') }}</span>
-            <el-form :model="form" :rules="rules" ref="from" style="padding-top: 10px;margin-left: 20px;">
-              <el-form-item :label="$t('commons.schedule_switch')">
+            <el-form :model="form" :rules="rules" ref="from" style="padding-top: 10px;margin-left: 20px;" class="ms-el-form-item__error">
+              <el-form-item :label="$t('commons.schedule_cron_title')"
+                            prop="cronValue" style="height: 50px">
                 <el-row :gutter="20">
-                  <el-col :span="18">
+                  <el-col :span="16">
+                    <el-input :disabled="isReadOnly" v-model="form.cronValue" class="inp"
+                              :placeholder="$t('schedule.please_input_cron_expression')" size="mini">
+                      <a :disabled="isReadOnly" type="primary" @click="showCronDialog" slot="suffix" class="head">
+                        {{ $t('schedule.generate_expression') }}
+                      </a>
+                    </el-input>
+
+                    <span>{{ this.$t('commons.schedule_switch') }}</span>
                     <el-tooltip effect="dark" placement="bottom"
                                 :content="schedule.enable ? $t('commons.close_schedule') : $t('commons.open_schedule')">
-                      <el-switch v-model="schedule.enable"></el-switch>
+                      <el-switch v-model="schedule.enable" style="margin-left: 20px"></el-switch>
                     </el-tooltip>
                   </el-col>
                   <el-col :span="2">
-                    <el-button :disabled="isReadOnly" type="primary" @click="saveCron">{{
+                    <el-button :disabled="isReadOnly" type="primary" @click="saveCron" size="mini">{{
                         $t('commons.save')
                       }}
                     </el-button>
                   </el-col>
                 </el-row>
-              </el-form-item>
-              <el-form-item :label="$t('commons.schedule_cron_title')"
-                            prop="cronValue">
-                <el-input :disabled="isReadOnly" v-model="form.cronValue" class="inp"
-                          :placeholder="$t('schedule.please_input_cron_expression')"/>
-              </el-form-item>
-              <el-form-item>
-                <el-link :disabled="isReadOnly" type="primary" @click="showCronDialog">
-                  {{ $t('schedule.generate_expression') }}
-                </el-link>
+
               </el-form-item>
               <crontab-result :ex="form.cronValue" ref="crontabResult"/>
             </el-form>
@@ -46,9 +46,9 @@
               <div class="el-step__icon-inner">2</div>
             </div>
             <span>{{ $t('load_test.runtime_config') }}</span>
-            <div style="padding-top: 10px;">
+            <div class="ms-mode-div">
               <span class="ms-mode-span">{{ $t("run_mode.title") }}：</span>
-              <el-radio-group v-model="runConfig.mode">
+              <el-radio-group v-model="runConfig.mode" @change="changeMode">
                 <el-radio label="serial">{{ $t("run_mode.serial") }}</el-radio>
                 <el-radio label="parallel">{{ $t("run_mode.parallel") }}</el-radio>
               </el-radio-group>
@@ -56,24 +56,23 @@
             <div class="ms-mode-div" v-if="runConfig.mode === 'serial'">
               <el-row>
                 <el-col :span="3">
-                  <span class="ms-mode-span">{{ $t("run_mode.other_config") }}:</span>
+                  <span class="ms-mode-span">{{ $t("run_mode.other_config") }}：</span>
                 </el-col>
                 <el-col :span="18">
                   <div>
                     <el-checkbox v-model="runConfig.onSampleError">{{ $t("api_test.fail_to_stop") }}</el-checkbox>
                   </div>
-                  <div v-if="scheduleTaskType === 'TEST_PLAN_TEST'" style="padding-top: 10px">
+                  <div v-if="testType === 'API'" style="padding-top: 10px">
                     <el-checkbox v-model="runConfig.runWithinResourcePool" style="padding-right: 10px;">
                       {{ $t('run_mode.run_with_resource_pool') }}
                     </el-checkbox>
                     <el-select :disabled="!runConfig.runWithinResourcePool" v-model="runConfig.resourcePoolId"
                                size="mini">
                       <el-option
-                        v-for="item in resourcePools"
-                        :key="item.id"
-                        :label="item.name"
-                        :disabled="!item.api"
-                        :value="item.id">
+                          v-for="item in resourcePools"
+                          :key="item.id"
+                          :label="item.name"
+                          :value="item.id">
                       </el-option>
                     </el-select>
                   </div>
@@ -83,21 +82,21 @@
             <div class="ms-mode-div" v-if="runConfig.mode === 'parallel'">
               <el-row>
                 <el-col :span="3">
-                  <span class="ms-mode-span">{{ $t("run_mode.other_config") }}:</span>
+                  <span class="ms-mode-span">{{ $t("run_mode.other_config") }}：</span>
                 </el-col>
                 <el-col :span="18">
-                  <div v-if="scheduleTaskType === 'TEST_PLAN_TEST'" style="padding-top: 10px">
+                  <div v-if="testType === 'API'">
                     <el-checkbox v-model="runConfig.runWithinResourcePool" style="padding-right: 10px;">
                       {{ $t('run_mode.run_with_resource_pool') }}
                     </el-checkbox>
                     <el-select :disabled="!runConfig.runWithinResourcePool" v-model="runConfig.resourcePoolId"
                                size="mini">
                       <el-option
-                        v-for="item in resourcePools"
-                        :key="item.id"
-                        :label="item.name"
-                        :disabled="!item.api"
-                        :value="item.id">
+                          v-for="item in resourcePools"
+                          :key="item.id"
+                          :label="item.name"
+                          :disabled="!item.api"
+                          :value="item.id">
                       </el-option>
                     </el-select>
                   </div>
@@ -125,14 +124,15 @@ import {
   getCurrentProjectID,
   getCurrentUser,
   getCurrentWorkspaceId,
-  listenGoBack,
-  removeGoBackListener
+  listenGoBack, objToStrMap,
+  removeGoBackListener, strMapToObj
 } from "@/common/js/utils";
 import Crontab from "@/business/components/common/cron/Crontab";
 import CrontabResult from "@/business/components/common/cron/CrontabResult";
 import {cronValidate} from "@/common/js/cron";
 import MsScheduleNotification from "./ScheduleNotification";
 import ScheduleSwitch from "@/business/components/api/automation/schedule/ScheduleSwitch";
+import {ENV_TYPE} from "@/common/js/constants";
 
 function defaultCustomValidate() {
   return {pass: true};
@@ -149,7 +149,7 @@ export default {
     ScheduleSwitch,
     Crontab,
     MsScheduleNotification,
-    "NoticeTemplate": noticeTemplate.default
+    "NoticeTemplate": noticeTemplate.default,
   },
 
   props: {
@@ -161,6 +161,8 @@ export default {
       type: Boolean,
       default: false
     },
+    planCaseIds: [],
+    type: String
   },
 
 
@@ -181,7 +183,10 @@ export default {
         callback(new Error(this.$t('commons.input_content')));
       } else if (!cronValidate(cronValue)) {
         callback(new Error(this.$t('schedule.cron_expression_format_error')));
-      } else if (!customValidate.pass) {
+      }else if(!this.intervalValidate()){
+        callback(new Error(this.$t('schedule.cron_expression_interval_error')));
+      }
+      else if (!customValidate.pass) {
         callback(new Error(customValidate.info));
       } else {
         if (!this.schedule.id){
@@ -217,12 +222,23 @@ export default {
         onSampleError: false,
         runWithinResourcePool: false,
         resourcePoolId: null,
+        environmentType: ENV_TYPE.JSON
       },
+      projectList: [],
+      testType: 'API',
+      planId: String,
+      projectIds: new Set(),
     };
   },
   methods: {
     currentUser: () => {
       return getCurrentUser();
+    },
+    intervalValidate() {
+      if (this.getIntervalTime() < 1 * 60 * 1000) {
+        return false;
+      }
+      return true;
     },
     scheduleChange() {
       let flag = this.schedule.enable;
@@ -276,6 +292,7 @@ export default {
       return param;
     },
     open(row) {
+      this.planId = row.id;
       //测试计划页面跳转来的
       let paramTestId = "";
       this.paramRow = row;
@@ -294,6 +311,7 @@ export default {
       listenGoBack(this.close);
       this.activeName = 'first';
       this.getResourcePools();
+      this.runConfig.environmentType = ENV_TYPE.JSON;
     },
     findSchedule() {
       let scheduleResourceID = this.testId;
@@ -337,7 +355,6 @@ export default {
           let formCronValue = this.form.cronValue;
           this.schedule.value = formCronValue;
           this.saveSchedule();
-          this.dialogVisible = false;
         } else {
           return false;
         }
@@ -348,12 +365,18 @@ export default {
       let param = {};
       param = this.schedule;
       param.resourceId = this.testId;
+      param.name = this.paramRow.name;
+      param.group = this.scheduleTaskType;
       // 兼容问题，数据库里有的projectId为空
       if (!param.projectId) {
         param.projectId = getCurrentProjectID();
       }
       if (!param.workspaceId) {
         param.workspaceId = getCurrentWorkspaceId();
+      }
+      if (this.runConfig.runWithinResourcePool && this.runConfig.resourcePoolId == null) {
+        this.$warning(this.$t('workspace.env_group.please_select_run_within_resource_pool'));
+        return;
       }
       param.config = JSON.stringify(this.runConfig);
       let url = '/api/automation/schedule/create';
@@ -375,6 +398,7 @@ export default {
         this.$success(this.$t('commons.save_success'));
         this.$emit("refreshTable");
       });
+      this.dialogVisible = false;
     },
     checkScheduleEdit() {
       if (this.create) {
@@ -422,6 +446,11 @@ export default {
         this.resourcePools = response.data;
       });
     },
+    changeMode() {
+      this.runConfig.onSampleError = false;
+      this.runConfig.runWithinResourcePool = false;
+      this.runConfig.resourcePoolId = null;
+    },
   },
   computed: {
     isTesterPermission() {
@@ -450,7 +479,27 @@ export default {
 .ms-mode-div {
   margin-top: 10px;
 }
+
 >>> .el-form-item__error {
   margin-left: 148px;
 }
+
+.head {
+  border-bottom: 1px solid #7C3985;
+  color: #7C3985;
+  font-family: "Helvetica Neue", Helvetica, "PingFang SC", "Hiragino Sans GB", Arial, sans-serif;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+>>> .el-link {
+  /* display: -webkit-inline-box; */
+  /* display: inline-flex; */
+}
+
+.ms-el-form-item__error >>> .el-form-item__error{
+  left: -42px;
+  padding-top: 0px;
+}
+
 </style>

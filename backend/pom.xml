@@ -7,7 +7,7 @@
     <parent>
         <artifactId>metersphere-server</artifactId>
         <groupId>io.metersphere</groupId>
-        <version>1.9</version>
+        <version>${revision}</version>
     </parent>
 
     <modelVersion>4.0.0</modelVersion>
@@ -19,6 +19,7 @@
         <java.version>11</java.version>
         <flyway.version>7.15.0</flyway.version>
         <dubbo.version>2.7.15</dubbo.version>
+        <skipAntRunForJenkins>false</skipAntRunForJenkins>
     </properties>
 
     <dependencies>
@@ -93,9 +94,9 @@
 
         <!--  后续考虑移到jmeter core -->
         <dependency>
-            <groupId>kg.apc</groupId>
+            <groupId>io.metersphere</groupId>
             <artifactId>jmeter-plugins-webdriver</artifactId>
-            <version>3.3</version>
+            <version>3.4</version>
             <exclusions>
                 <exclusion>
                     <groupId>org.apache.jmeter</groupId>
@@ -168,7 +169,7 @@
         <dependency>
             <groupId>com.alibaba</groupId>
             <artifactId>fastjson</artifactId>
-            <version>1.2.72</version>
+            <version>1.2.80</version>
         </dependency>
 
         <!-- openapi -->
@@ -187,7 +188,7 @@
         <dependency>
             <groupId>io.metersphere</groupId>
             <artifactId>ms-jmeter-core</artifactId>
-            <version>1.1.4</version>
+            <version>1.1.7</version>
             <exclusions>
                 <exclusion>
                     <artifactId>netty</artifactId>
@@ -217,6 +218,12 @@
             <groupId>com.google.inject</groupId>
             <artifactId>guice</artifactId>
             <version>5.1.0</version>
+        </dependency>
+
+        <dependency>
+            <artifactId>xz</artifactId>
+            <groupId>org.tukaani</groupId>
+            <version>1.9</version>
         </dependency>
 
 
@@ -310,9 +317,9 @@
         </dependency>
         <!-- 反射工具包 -->
         <dependency>
-            <groupId>net.oneandone.reflections8</groupId>
-            <artifactId>reflections8</artifactId>
-            <version>0.11.7</version>
+            <groupId>org.reflections</groupId>
+            <artifactId>reflections</artifactId>
+            <version>0.10.2</version>
         </dependency>
         <!-- k8s client -->
         <dependency>
@@ -475,6 +482,7 @@
                 <version>2.6</version>
             </plugin>
 
+            <!--     本地开发需要，ci打包时不执行这个插件       -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-antrun-plugin</artifactId>
@@ -483,17 +491,18 @@
                         <id>main-class-placement</id>
                         <phase>generate-resources</phase>
                         <configuration>
+                            <skip>${skipAntRunForJenkins}</skip>
                             <target>
-                                <move todir="src/main/resources/static">
+                                <copy todir="src/main/resources/static">
                                     <fileset dir="../frontend/dist">
                                         <exclude name="*.html"/>
                                     </fileset>
-                                </move>
-                                <move todir="src/main/resources/public">
+                                </copy>
+                                <copy todir="src/main/resources/public">
                                     <fileset dir="../frontend/dist">
                                         <include name="*.html"/>
                                     </fileset>
-                                </move>
+                                </copy>
                                 <copy todir="src/main/resources/static/css">
                                     <fileset dir="../frontend/src/assets/theme">
                                         <include name="index.css"/>
@@ -507,6 +516,7 @@
                     </execution>
                 </executions>
             </plugin>
+
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-dependency-plugin</artifactId>

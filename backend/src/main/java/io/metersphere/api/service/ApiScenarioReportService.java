@@ -3,6 +3,7 @@ package io.metersphere.api.service;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
+import com.alibaba.fastjson.parser.Feature;
 import io.metersphere.api.dto.*;
 import io.metersphere.api.dto.automation.APIScenarioReportResult;
 import io.metersphere.api.dto.automation.ExecuteType;
@@ -30,6 +31,7 @@ import io.metersphere.track.dto.PlanReportCaseDTO;
 import io.metersphere.utils.LoggerUtil;
 import org.apache.commons.beanutils.BeanMap;
 import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -79,10 +81,12 @@ public class ApiScenarioReportService {
     private ApiScenarioReportStructureMapper apiScenarioReportStructureMapper;
     @Resource
     private ApiDefinitionExecResultMapper definitionExecResultMapper;
+    @Resource
+    private UiReportServiceProxy uiReportServiceProxy;
 
-    public void saveResult(List<RequestResult> requestResults, ResultDTO dto) {
+    public void saveResult(ResultDTO dto) {
         // 报告详情内容
-        apiScenarioReportResultService.save(dto.getReportId(), requestResults);
+        apiScenarioReportResultService.save(dto.getReportId(), dto.getRequestResults());
     }
 
 
@@ -92,7 +96,7 @@ public class ApiScenarioReportService {
 
     public void saveUiResult(List<RequestResult> requestResults, ResultDTO dto) {
         // 报告详情内容
-        apiScenarioReportResultService.uiSave(dto.getReportId(), requestResults);
+        uiReportServiceProxy.saveUiResult(dto.getReportId(), requestResults);
     }
 
     public ApiScenarioReport testEnded(ResultDTO dto) {
@@ -126,7 +130,7 @@ public class ApiScenarioReportService {
         return scenarioReport;
     }
 
-    public APIScenarioReportResult get(String reportId) {
+    public APIScenarioReportResult get(String reportId, boolean selectReportContent) {
         ApiDefinitionExecResult result = definitionExecResultMapper.selectByPrimaryKey(reportId);
         if (result != null) {
             APIScenarioReportResult reportResult = new APIScenarioReportResult();
@@ -140,7 +144,7 @@ public class ApiScenarioReportService {
         APIScenarioReportResult reportResult = extApiScenarioReportMapper.get(reportId);
         if (reportResult != null) {
             if (reportResult.getReportVersion() != null && reportResult.getReportVersion() > 1) {
-                reportResult.setContent(JSON.toJSONString(apiScenarioReportStructureService.assembleReport(reportId)));
+                reportResult.setContent(JSON.toJSONString(apiScenarioReportStructureService.assembleReport(reportId, selectReportContent)));
             } else {
                 ApiScenarioReportDetail detail = apiScenarioReportDetailMapper.selectByPrimaryKey(reportId);
                 if (detail != null && reportResult != null) {
@@ -449,7 +453,7 @@ public class ApiScenarioReportService {
         String environmentType = apiScenario.getEnvironmentType();
         if (StringUtils.equals(environmentType, EnvironmentType.JSON.name()) && StringUtils.isNotEmpty(apiScenario.getEnvironmentJson())) {
             String environmentJson = apiScenario.getEnvironmentJson();
-            JSONObject jsonObject = JSON.parseObject(environmentJson);
+            JSONObject jsonObject = JSON.parseObject(environmentJson, Feature.DisableSpecialKeyDetect);
             ApiTestEnvironmentExample example = new ApiTestEnvironmentExample();
             List<String> collect = jsonObject.values().stream().map(Object::toString).collect(Collectors.toList());
             collect.add("-1");// 防止没有配置环境导致不能发送的问题
@@ -500,8 +504,6 @@ public class ApiScenarioReportService {
                 .operator(userId)
                 .context(context)
                 .subject("接口自动化通知")
-                .successMailTemplate("api/ScenarioResultSuccess")
-                .failedMailTemplate("api/ScenarioResultFailed")
                 .paramMap(paramMap)
                 .event(event)
                 .build();
@@ -547,13 +549,15 @@ public class ApiScenarioReportService {
         structureExample.createCriteria().andReportIdEqualTo(request.getId());
         apiScenarioReportStructureMapper.deleteByExample(structureExample);
 
-        ApiDefinitionExecResultExample definitionExecResultExample = new ApiDefinitionExecResultExample();
-        definitionExecResultExample.createCriteria().andIdEqualTo(request.getId());
-        definitionExecResultMapper.deleteByExample(definitionExecResultExample);
+        if (BooleanUtils.isNotTrue(request.getIsUi())) {
+            ApiDefinitionExecResultExample definitionExecResultExample = new ApiDefinitionExecResultExample();
+            definitionExecResultExample.createCriteria().andIdEqualTo(request.getId());
+            definitionExecResultMapper.deleteByExample(definitionExecResultExample);
 
-        ApiDefinitionExecResultExample execResultExample = new ApiDefinitionExecResultExample();
-        execResultExample.createCriteria().andIntegratedReportIdEqualTo(request.getId());
-        definitionExecResultMapper.deleteByExample(execResultExample);
+            ApiDefinitionExecResultExample execResultExample = new ApiDefinitionExecResultExample();
+            execResultExample.createCriteria().andIntegratedReportIdEqualTo(request.getId());
+            definitionExecResultMapper.deleteByExample(execResultExample);
+        }
 
         // 补充逻辑，如果是集成报告则把零时报告全部删除
         ApiScenarioReport report = apiScenarioReportMapper.selectByPrimaryKey(request.getId());
@@ -561,6 +565,7 @@ public class ApiScenarioReportService {
             List<String> list = getReportIds(report.getScenarioId());
             if (CollectionUtils.isNotEmpty(list)) {
                 APIReportBatchRequest reportRequest = new APIReportBatchRequest();
+                reportRequest.setIsUi(request.getIsUi());
                 reportRequest.setIds(list);
                 this.deleteAPIReportBatch(reportRequest);
             }
@@ -624,16 +629,7 @@ public class ApiScenarioReportService {
                 ids.removeAll(reportRequest.getUnSelectIds());
             }
         }
-        ApiScenarioReportExample example = new ApiScenarioReportExample();
-        example.createCriteria().andIdIn(reportRequest.getIds());
-        List<ApiScenarioReport> reportList = apiScenarioReportMapper.selectByExample(example);
-        // 取出可能是集成报告的ID 放入删除
-        reportList.forEach(item -> {
-            List<String> reportIds = getReportIds(item.getScenarioId());
-            if (CollectionUtils.isNotEmpty(reportIds)) {
-                reportRequest.getIds().addAll(reportIds);
-            }
-        });
+
         List<String> myList = reportRequest.getIds().stream().distinct().collect(Collectors.toList());
         reportRequest.setIds(myList);
         //为预防数量太多，调用删除方法时引起SQL过长的Bug，此处采取分批执行的方式。
@@ -667,13 +663,15 @@ public class ApiScenarioReportService {
             structureExample.createCriteria().andReportIdIn(handleIdList);
             apiScenarioReportStructureMapper.deleteByExample(structureExample);
 
-            ApiDefinitionExecResultExample definitionExecResultExample = new ApiDefinitionExecResultExample();
-            definitionExecResultExample.createCriteria().andIdIn(handleIdList);
-            definitionExecResultMapper.deleteByExample(definitionExecResultExample);
+            if (BooleanUtils.isNotTrue(reportRequest.getIsUi())) {
+                ApiDefinitionExecResultExample definitionExecResultExample = new ApiDefinitionExecResultExample();
+                definitionExecResultExample.createCriteria().andIdIn(handleIdList);
+                definitionExecResultMapper.deleteByExample(definitionExecResultExample);
 
-            ApiDefinitionExecResultExample execResultExample = new ApiDefinitionExecResultExample();
-            execResultExample.createCriteria().andIntegratedReportIdIn(handleIdList);
-            definitionExecResultMapper.deleteByExample(execResultExample);
+                ApiDefinitionExecResultExample execResultExample = new ApiDefinitionExecResultExample();
+                execResultExample.createCriteria().andIntegratedReportIdIn(handleIdList);
+                definitionExecResultMapper.deleteByExample(execResultExample);
+            }
 
             //转存剩余的数据
             ids = otherIdList;
@@ -696,13 +694,15 @@ public class ApiScenarioReportService {
             structureExample.createCriteria().andReportIdIn(ids);
             apiScenarioReportStructureMapper.deleteByExample(structureExample);
 
-            ApiDefinitionExecResultExample definitionExecResultExample = new ApiDefinitionExecResultExample();
-            definitionExecResultExample.createCriteria().andIdIn(ids);
-            definitionExecResultMapper.deleteByExample(definitionExecResultExample);
+            if (BooleanUtils.isNotTrue(reportRequest.getIsUi())) {
+                ApiDefinitionExecResultExample definitionExecResultExample = new ApiDefinitionExecResultExample();
+                definitionExecResultExample.createCriteria().andIdIn(ids);
+                definitionExecResultMapper.deleteByExample(definitionExecResultExample);
 
-            ApiDefinitionExecResultExample execResultExample = new ApiDefinitionExecResultExample();
-            execResultExample.createCriteria().andIntegratedReportIdIn(ids);
-            definitionExecResultMapper.deleteByExample(execResultExample);
+                ApiDefinitionExecResultExample execResultExample = new ApiDefinitionExecResultExample();
+                execResultExample.createCriteria().andIntegratedReportIdIn(ids);
+                definitionExecResultMapper.deleteByExample(execResultExample);
+            }
         }
     }
 
@@ -848,7 +848,7 @@ public class ApiScenarioReportService {
         } else if (errorReportResultSize > 0) {
             status = ExecuteResult.errorReportResult.name();
         } else {
-            status = ScenarioStatus.Success.name();
+            status = requestResults.isEmpty() ? ScenarioStatus.Error.name() : ScenarioStatus.Success.name();
         }
 
         if (dto != null && dto.getArbitraryData() != null && dto.getArbitraryData().containsKey("TIMEOUT") && (Boolean) dto.getArbitraryData().get("TIMEOUT")) {
@@ -911,5 +911,9 @@ public class ApiScenarioReportService {
                 apiScenarioReportMapper.updateByPrimaryKey(apiTestReport);
             }
         }
+    }
+
+    public RequestResult selectReportContent(String stepId) {
+        return apiScenarioReportStructureService.selectReportContent(stepId);
     }
 }

@@ -123,7 +123,7 @@
     </select>
     <select id="list" resultType="io.metersphere.base.domain.ApiDefinitionExecResultExpand">
         SELECT a_r.name AS test_name,
-        a_r.end_time,
+        a_r.end_time as end_time,
         a_r.user_id,
         a_r.name,
         a_r.id,
@@ -275,4 +275,11 @@
             #{value}
         </foreach>
     </update>
+
+    <select id="findByProjectIds" resultType="io.metersphere.base.domain.ApiDefinitionExecResult" parameterType="java.lang.String">
+      select actuator ,id   from api_definition_exec_result where status in ("running","starting","waiting") and project_id in
+        <foreach collection="request.projects" item="id" separator="," open="(" close=")">
+            #{id}
+        </foreach>
+    </select>
 </mapper>

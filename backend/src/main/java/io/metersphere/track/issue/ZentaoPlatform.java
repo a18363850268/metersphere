@@ -4,13 +4,15 @@ import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 import com.alibaba.fastjson.TypeReference;
-import io.metersphere.base.domain.*;
+import io.metersphere.base.domain.IssuesDao;
+import io.metersphere.base.domain.IssuesExample;
+import io.metersphere.base.domain.IssuesWithBLOBs;
+import io.metersphere.base.domain.Project;
 import io.metersphere.commons.constants.IssuesManagePlatform;
 import io.metersphere.commons.constants.IssuesStatus;
 import io.metersphere.commons.exception.MSException;
 import io.metersphere.commons.utils.LogUtil;
 import io.metersphere.dto.UserDTO;
-import io.metersphere.i18n.Translator;
 import io.metersphere.track.dto.DemandDTO;
 import io.metersphere.track.issue.client.ZentaoClient;
 import io.metersphere.track.issue.domain.PlatformUser;
@@ -150,7 +152,7 @@ public class ZentaoPlatform extends AbstractIssuePlatform {
         String description = bugObj.getSteps();
         String steps = description;
         try {
-            steps = zentao2MsDescription(description);
+            steps = htmlDesc2MsDesc(zentao2MsDescription(description));
         } catch (Exception e) {
             LogUtil.error(e.getMessage(), e);
         }
@@ -340,20 +342,16 @@ public class ZentaoPlatform extends AbstractIssuePlatform {
             IssuesWithBLOBs issue = issuesMapper.selectByPrimaryKey(item.getId());
             JSONObject bug = zentaoClient.getBugById(item.getPlatformId());
             issue = getUpdateIssues(issue, bug);
+            customFieldIssuesService.addFields(item.getId(), customFieldService.getCustomFieldResource(issue.getCustomFields()));
             issue.setId(item.getId());
             issuesMapper.updateByPrimaryKeySelective(issue);
         });
     }
 
     public List<ZentaoBuild> getBuilds() {
-        String relateProjectId = getProjectId(projectId);
-        Boolean exist = checkProjectExist(relateProjectId);
-        if (!exist) {
-            MSException.throwException(Translator.get("zentao_project_id_not_exist"));
-        }
-        Map<String, Object> builds = zentaoClient.getBuildsByCreateMetaData(relateProjectId);
+        Map<String, Object> builds = zentaoClient.getBuildsByCreateMetaData(getProjectId(projectId));
         if (builds == null || builds.isEmpty()) {
-            builds = zentaoClient.getBuilds(relateProjectId);
+            builds = zentaoClient.getBuilds(getProjectId(projectId));
         }
         List<ZentaoBuild> res = new ArrayList<>();
         builds.forEach((k, v) -> {
@@ -429,7 +427,7 @@ public class ZentaoPlatform extends AbstractIssuePlatform {
                 String src = getMatcherResultForImg("src\\s*=\\s*\"?(.*?)(\"|>|\\s+)", imgPath);
                 String alt = getMatcherResultForImg("alt\\s*=\\s*\"?(.*?)(\"|>|\\s+)", imgPath);
                 String hyperLinkPath = packageDescriptionByPathAndName(src, alt);
-                imgPath = imgPath.replace("{", "\\{").replace("}", "\\}");
+                imgPath = transferSpecialCharacter(imgPath);
                 ztDescription = ztDescription.replaceAll(imgPath, hyperLinkPath);
             }
         }
@@ -446,8 +444,15 @@ public class ZentaoPlatform extends AbstractIssuePlatform {
                 if (StringUtils.isEmpty(name)) {
                     name = srcContent;
                 }
+
                 if (Arrays.stream(imgArray).anyMatch(imgType -> StringUtils.equals(imgType, srcContent.substring(srcContent.indexOf('.') + 1)))) {
-                    path = zentaoClient.getBaseUrl() + "/file-read-" + srcContent;
+                    if (zentaoClient.getBaseUrl().contains("biz")) {
+                        // 禅道企业版
+                        path = zentaoClient.getBaseUrl() + "/index.php?m=file&f=read&fileID=" + srcContent;
+                    } else {
+                        // 禅道开源版
+                        path = zentaoClient.getBaseUrl() + "/file-read-" + srcContent;
+                    }
                 } else {
                     return result;
                 }

@@ -4,6 +4,7 @@ import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
 import com.alibaba.fastjson.annotation.JSONField;
 import com.alibaba.fastjson.annotation.JSONType;
+import com.alibaba.fastjson.parser.Feature;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -77,6 +78,8 @@ public class MsJDBCPostProcessor extends MsTestElement {
     @Override
     public void toHashTree(HashTree tree, List<MsTestElement> hashTree, MsParameter msParameter) {
         ParameterConfig config = (ParameterConfig) msParameter;
+        // 历史数据清理
+        this.dataSource = null;
         // 非导出操作，且不是启用状态则跳过执行
         if (!config.isOperating() && !this.isEnable()) {
             return;
@@ -92,10 +95,6 @@ public class MsJDBCPostProcessor extends MsTestElement {
 
         // 数据兼容处理
         if (config.getConfig() != null && StringUtils.isNotEmpty(this.getProjectId()) && config.getConfig().containsKey(this.getProjectId())) {
-            EnvironmentConfig environmentConfig = config.getConfig().get(this.getProjectId());
-            if(environmentConfig.getDatabaseConfigs() != null){
-                this.environmentId = environmentConfig.getApiEnvironmentid();
-            }
             // 1.8 之后 当前正常数据
         } else if (config.getConfig() != null && config.getConfig().containsKey(getParentProjectId())) {
             // 1.8 前后 混合数据
@@ -119,6 +118,10 @@ public class MsJDBCPostProcessor extends MsTestElement {
             // 自选了数据源
             if (config.isEffective(this.getProjectId()) && CollectionUtils.isNotEmpty(config.getConfig().get(this.getProjectId()).getDatabaseConfigs())
                     && isDataSource(config.getConfig().get(this.getProjectId()).getDatabaseConfigs())) {
+                EnvironmentConfig environmentConfig = config.getConfig().get(this.getProjectId());
+                if (environmentConfig.getDatabaseConfigs() != null && StringUtils.isNotEmpty(environmentConfig.getApiEnvironmentid())) {
+                    this.environmentId = environmentConfig.getApiEnvironmentid();
+                }
                 this.initDataSource();
             } else {
                 // 取当前环境下默认的一个数据源
@@ -182,7 +185,7 @@ public class MsJDBCPostProcessor extends MsTestElement {
                 if (bloBs != null) {
                     this.setName(bloBs.getName());
                     this.setProjectId(bloBs.getProjectId());
-                    JSONObject element = JSON.parseObject(bloBs.getRequest());
+                    JSONObject element = JSON.parseObject(bloBs.getRequest(), Feature.DisableSpecialKeyDetect);
                     ElementUtil.dataFormatting(element);
                     proxy = mapper.readValue(element.toJSONString(), new TypeReference<MsJDBCPostProcessor>() {
                     });

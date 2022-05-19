@@ -27,12 +27,8 @@
                            min-width="120px"
                            show-overflow-tooltip/>
         </el-table>
-        <div v-else-if="apiInfo.requestBodyParamType == 'JSON-SCHEMA'" style="margin-left: 10px">
+        <div v-else-if="apiInfo.requestBodyParamType === 'JSON-SCHEMA' || apiInfo.requestBodyParamType === 'JSON'" style="margin-left: 10px">
           <ms-json-code-edit :show-preview="false" :json-schema-disable="true" :body="apiInfo.jsonSchemaBody"
-                             ref="jsonCodeEdit"/>
-        </div>
-        <div v-else-if="formatRowDataToJsonSchema(apiInfo,'request') " style="margin-left: 10px">
-          <ms-json-code-edit :show-preview="false" :json-schema-disable="true" :body="apiInfo.requestJsonSchema"
                              ref="jsonCodeEdit"/>
         </div>
         <div v-else class="showDataDiv">
@@ -142,20 +138,6 @@ export default {
     },
     //构建预览数据
     genPreviewData(previewData) {
-      if (previewData !== null && previewData !== '') {
-        let showDataObj = {};
-        for (var key in previewData) {
-          let value = previewData[key];
-          if (typeof (value) == 'string') {
-            if (value.indexOf("@") >= 0) {
-              value = this.showPreview(value);
-            }
-          }
-          showDataObj[key] = value;
-        }
-        showDataObj = JSON.stringify(showDataObj);
-        previewData = formatJson(showDataObj);
-      }
       return previewData;
     },
   },

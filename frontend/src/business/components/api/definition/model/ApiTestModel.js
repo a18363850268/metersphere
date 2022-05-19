@@ -805,6 +805,7 @@ export class AssertionDocument extends BaseConfig {
     this.include = false;
     this.typeVerification = false;
     this.type = "object";
+    this.enable = true;
     this.arrayVerification = false;
     this.contentVerifications = "none";
     this.expectedOutcome = "";
@@ -851,7 +852,7 @@ export class Text extends AssertionType {
     this.subject = undefined;
     this.condition = undefined;
     this.value = undefined;
-
+    this.enable = true;
     this.set(options);
   }
 }
@@ -919,7 +920,7 @@ export class JSONPath extends AssertionType {
     this.expression = undefined;
     this.expect = undefined;
     this.description = undefined;
-
+    this.enable = true;
     this.set(options);
   }
 
@@ -965,6 +966,7 @@ export class Extract extends BaseConfig {
     super();
     this.resourceId = uuid();
     this.type = "Extract";
+    this.xpathType = 'html';
     this.regex = [];
     this.json = [];
     this.xpath = [];
@@ -995,7 +997,6 @@ export class ExtractCommon extends ExtractType {
     this.expression = undefined;
     this.description = undefined;
     this.multipleMatching = undefined;
-
     this.set(options);
   }
 
@@ -1130,6 +1131,9 @@ export class TransactionController extends Controller {
     this.type = "TransactionController";
     this.name;
     this.hashTree = [];
+    this.generateParentSample =true;
+    this.includeTimers = true;
+
     this.set(options);
   }
 

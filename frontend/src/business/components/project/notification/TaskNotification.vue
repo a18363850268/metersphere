@@ -139,7 +139,8 @@ export default {
         {value: 'EMAIL', label: this.$t('organization.message.mail')},
         {value: 'NAIL_ROBOT', label: this.$t('organization.message.nail_robot')},
         {value: 'WECHAT_ROBOT', label: this.$t('organization.message.enterprise_wechat_robot')},
-        {value: 'LARK', label: this.$t('organization.message.lark')}
+        {value: 'LARK', label: this.$t('organization.message.lark')},
+        {value: 'WEBHOOK', label: this.$t('organization.message.webhook')},
       ],
       result: {}
     };
@@ -206,5 +207,9 @@ export default {
 
 .primary-text {
   color: #783887;
+}
+
+/deep/ .el-table td {
+  text-align: left !important;
 }
 </style>

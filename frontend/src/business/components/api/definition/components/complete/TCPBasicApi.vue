@@ -37,7 +37,7 @@
               <el-option
                 v-for="item in maintainerOptions"
                 :key="item.id"
-                :label="item.name + ' (' + item.id + ')'"
+                :label="item.name + ' (' + item.email + ')'"
                 :value="item.id">
               </el-option>
             </el-select>
@@ -65,10 +65,9 @@
 
 <script>
   import {API_STATUS} from "../../model/JsonData";
-  import {WORKSPACE_ID} from '../../../../../../common/js/constants';
   import MsInputTag from "@/business/components/api/automation/scenario/MsInputTag";
   import MsSelectTree from "../../../../common/select-tree/SelectTree";
-  import {getCurrentProjectID} from "@/common/js/utils";
+  import {getProjectMemberOption} from "@/network/user";
 
   export default {
     name: "MsTcpBasicApi",
@@ -118,6 +117,7 @@
           id: 'id',
           label: 'name',
         },
+        tagCount: 0
 
       }
     },
@@ -159,7 +159,15 @@
       },
       'basicForm.description': {
         handler(v, v1) {
-          if (v && v1 && v !== v1) {
+          if (v && v1 !== undefined && v !== v1) {
+            this.apiMapStatus();
+          }
+        }
+      },
+      'basicForm.tags': {
+        handler(v, v1) {
+          this.tagCount++;
+          if (v && v1 && JSON.stringify(v) !== JSON.stringify(v1) && this.tagCount > 1) {
             this.apiMapStatus();
           }
         }
@@ -173,8 +181,8 @@
         }
       },
       getMaintainerOptions() {
-        this.$post('/user/project/member/tester/list', {projectId: getCurrentProjectID()}, response => {
-          this.maintainerOptions = response.data;
+        getProjectMemberOption(data => {
+          this.maintainerOptions = data;
         });
       },
       reload() {
@@ -189,6 +197,7 @@
             this.$emit('callback');
           }
         })
+        this.tagCount = 0;
       },
       createModules() {
         this.$emit("createRootModelInTree");

@@ -1,23 +1,25 @@
 package io.metersphere.api.dto.definition.parse;
 
 import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.parser.Feature;
 import io.metersphere.api.dto.ApiTestImportRequest;
 import io.metersphere.api.dto.definition.request.sampler.MsHTTPSamplerProxy;
+import io.metersphere.api.dto.definition.response.HttpResponse;
 import io.metersphere.api.dto.parse.postman.PostmanCollection;
 import io.metersphere.api.dto.parse.postman.PostmanItem;
 import io.metersphere.api.dto.parse.postman.PostmanKeyValue;
 import io.metersphere.api.parse.PostmanAbstractParserParser;
 import io.metersphere.base.domain.ApiDefinitionWithBLOBs;
 import io.metersphere.base.domain.ApiModule;
-import io.metersphere.commons.constants.ProjectApplicationType;
-import io.metersphere.dto.ProjectConfig;
-import io.metersphere.service.ProjectApplicationService;
-import org.apache.commons.lang3.StringUtils;
 import io.metersphere.base.domain.ApiTestCaseWithBLOBs;
 import io.metersphere.base.domain.Project;
 import io.metersphere.base.mapper.ProjectMapper;
+import io.metersphere.commons.constants.ProjectApplicationType;
 import io.metersphere.commons.utils.BeanUtils;
 import io.metersphere.commons.utils.CommonBeanFactory;
+import io.metersphere.dto.ProjectConfig;
+import io.metersphere.service.ProjectApplicationService;
+import org.apache.commons.lang3.StringUtils;
 
 import java.io.InputStream;
 import java.util.*;
@@ -32,7 +34,7 @@ public class PostmanDefinitionParser extends PostmanAbstractParserParser<ApiDefi
     public ApiDefinitionImport parse(InputStream source, ApiTestImportRequest request) {
         String testStr = getApiTestStr(source);
         this.projectId = request.getProjectId();
-        PostmanCollection postmanCollection = JSON.parseObject(testStr, PostmanCollection.class);
+        PostmanCollection postmanCollection = JSON.parseObject(testStr, PostmanCollection.class, Feature.DisableSpecialKeyDetect);
         List<PostmanKeyValue> variables = postmanCollection.getVariable();
         ApiDefinitionImport apiImport = new ApiDefinitionImport();
         List<ApiDefinitionWithBLOBs> results = new ArrayList<>();
@@ -65,13 +67,15 @@ public class PostmanDefinitionParser extends PostmanAbstractParserParser<ApiDefi
             if (childItems != null) {
                 ApiModule module = null;
                 module = ApiDefinitionImportUtil.buildModule(parentModule, item.getName(), this.projectId);
-                parseItem(childItems, variables, results, module,  path + "/" + module.getName(), cases, repeatMap, repeatable);
+                parseItem(childItems, variables, results, module, path + "/" + module.getName(), cases, repeatMap, repeatable);
             } else {
                 MsHTTPSamplerProxy msHTTPSamplerProxy = parsePostman(item);
+                HttpResponse response = parsePostmanResponse(item);
                 ApiDefinitionWithBLOBs request = buildApiDefinition(msHTTPSamplerProxy.getId(), msHTTPSamplerProxy.getName(),
                         msHTTPSamplerProxy.getPath(), msHTTPSamplerProxy.getMethod(), new ApiTestImportRequest());
                 request.setPath(msHTTPSamplerProxy.getPath());
                 request.setRequest(JSON.toJSONString(msHTTPSamplerProxy));
+                request.setResponse(JSON.toJSONString(response));
                 if (parentModule != null) {
                     request.setModuleId(parentModule.getId());
                     if (StringUtils.isNotBlank(this.selectModulePath)) {
@@ -83,7 +87,7 @@ public class PostmanDefinitionParser extends PostmanAbstractParserParser<ApiDefi
                 if (request != null) {
                     if (repeatMap.keySet().contains(request.getMethod() + request.getPath())
                             && (repeatable == null || repeatable == false)) {
-                        ApiTestCaseWithBLOBs apiTestCase =  new ApiTestCaseWithBLOBs();
+                        ApiTestCaseWithBLOBs apiTestCase = new ApiTestCaseWithBLOBs();
                         BeanUtils.copyBean(apiTestCase, request);
                         apiTestCase.setApiDefinitionId(repeatMap.get(request.getMethod() + request.getPath()));
                         apiTestCase.setPriority("P0");

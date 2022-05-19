@@ -3,6 +3,7 @@ package io.metersphere.api.service;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
+import com.alibaba.fastjson.parser.Feature;
 import io.metersphere.api.dto.automation.ApiScenarioDTO;
 import io.metersphere.api.dto.datacount.ApiMethodUrlDTO;
 import io.metersphere.api.dto.definition.ApiDefinitionResult;
@@ -34,32 +35,34 @@ public class MsHashTreeService {
     @Resource
     private ExtApiScenarioMapper extApiScenarioMapper;
 
-    private static final String CASE = "CASE";
-    private static final String REFERENCED = "referenced";
-    private static final String REF = "REF";
-    private static final String REF_TYPE = "refType";
-    private static final String ID = "id";
-    private static final String NAME = "name";
-    private static final String SCENARIO = "scenario";
-    private static final String TYPE = "type";
-    private static final String HASH_TREE = "hashTree";
-    private static final String PATH = "path";
-    private static final String METHOD = "method";
-    private static final String ENABLE = "enable";
-    private static final String NUM = "num";
-    private static final String ENV_ENABLE = "environmentEnable";
-    private static final String VARIABLE_ENABLE = "variableEnable";
-    private static final String DISABLED = "disabled";
-    private static final String VERSION_NAME = "versionName";
-    private static final String VERSION_ENABLE = "versionEnable";
-    private static final String URL = "url";
-    private static final String HEADERS = "headers";
-    private static final String REST = "rest";
-    private static final String BODY = "body";
-    private static final String ARGUMENTS = "arguments";
-    private static final String AUTH_MANAGER = "authManager";
-    private static final String PROJECT_ID = "projectId";
-    private static final String ACTIVE = "active";
+    public static final String CASE = "CASE";
+    public static final String REFERENCED = "referenced";
+    public static final String REF = "REF";
+    public static final String CREATED = "Created";
+    public static final String REF_TYPE = "refType";
+    public static final String ID = "id";
+    public static final String NAME = "name";
+    public static final String SCENARIO = "scenario";
+    public static final String TYPE = "type";
+    public static final String HASH_TREE = "hashTree";
+    public static final String PATH = "path";
+    public static final String METHOD = "method";
+    public static final String ENABLE = "enable";
+    public static final String NUM = "num";
+    public static final String ENV_ENABLE = "environmentEnable";
+    public static final String VARIABLE_ENABLE = "variableEnable";
+    public static final String DISABLED = "disabled";
+    public static final String VERSION_NAME = "versionName";
+    public static final String VERSION_ENABLE = "versionEnable";
+    public static final String URL = "url";
+    public static final String HEADERS = "headers";
+    public static final String REST = "rest";
+    public static final String BODY = "body";
+    public static final String ARGUMENTS = "arguments";
+    public static final String AUTH_MANAGER = "authManager";
+    public static final String PROJECT_ID = "projectId";
+    public static final String ACTIVE = "active";
+    public static final String ENV_MAP = "environmentMap";
 
     public void setHashTree(JSONArray hashTree) {
         // 将引用转成复制
@@ -76,7 +79,7 @@ public class MsHashTreeService {
                     if (refType.equals(CASE)) {
                         ApiTestCaseWithBLOBs bloBs = apiTestCaseService.get(object.getString(ID));
                         if (bloBs != null) {
-                            object = JSON.parseObject(bloBs.getRequest());
+                            object = JSON.parseObject(bloBs.getRequest(), Feature.DisableSpecialKeyDetect);
                             object.put(ID, bloBs.getId());
                             object.put(NAME, bloBs.getName());
                             hashTree.set(i, object);
@@ -84,14 +87,14 @@ public class MsHashTreeService {
                     } else {
                         ApiScenarioWithBLOBs bloBs = apiScenarioMapper.selectByPrimaryKey(object.getString(ID));
                         if (bloBs != null) {
-                            object = JSON.parseObject(bloBs.getScenarioDefinition());
+                            object = JSON.parseObject(bloBs.getScenarioDefinition(), Feature.DisableSpecialKeyDetect);
                             hashTree.set(i, object);
                         }
                     }
                 } else if (SCENARIO.equals(object.getString(TYPE))) {
                     ApiScenarioWithBLOBs bloBs = apiScenarioMapper.selectByPrimaryKey(object.getString(ID));
                     if (bloBs != null) {
-                        object = JSON.parseObject(bloBs.getScenarioDefinition());
+                        object = JSON.parseObject(bloBs.getScenarioDefinition(), Feature.DisableSpecialKeyDetect);
                         hashTree.set(i, object);
                     }
                 }
@@ -181,7 +184,7 @@ public class MsHashTreeService {
             ApiTestCaseInfo apiTestCase = apiTestCaseService.get(element.getString(ID));
             if (apiTestCase != null) {
                 if (StringUtils.equalsIgnoreCase(element.getString(REFERENCED), REF)) {
-                    JSONObject refElement = JSON.parseObject(apiTestCase.getRequest());
+                    JSONObject refElement = JSON.parseObject(apiTestCase.getRequest(), Feature.DisableSpecialKeyDetect);
                     ElementUtil.dataFormatting(refElement);
                     JSONArray array = refElement.getJSONArray(HASH_TREE);
                     ElementUtil.copyBean(element, refElement);
@@ -253,8 +256,11 @@ public class MsHashTreeService {
             boolean variableEnable = element.containsKey(VARIABLE_ENABLE)
                     ? element.getBoolean(VARIABLE_ENABLE) : true;
 
+            if (environmentEnable && StringUtils.isNotEmpty(scenarioWithBLOBs.getEnvironmentJson())) {
+                element.put(ENV_MAP, JSON.parseObject(scenarioWithBLOBs.getEnvironmentJson(), Map.class));
+            }
             if (StringUtils.equalsIgnoreCase(element.getString(REFERENCED), REF)) {
-                element = JSON.parseObject(scenarioWithBLOBs.getScenarioDefinition());
+                element = JSON.parseObject(scenarioWithBLOBs.getScenarioDefinition(), Feature.DisableSpecialKeyDetect);
                 element.put(REFERENCED, REF);
                 element.put(NAME, scenarioWithBLOBs.getName());
             }

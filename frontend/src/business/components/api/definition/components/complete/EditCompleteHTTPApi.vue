@@ -61,7 +61,7 @@
                   <el-option
                     v-for="item in maintainerOptions"
                     :key="item.id"
-                    :label="item.name + ' (' + item.id + ')'"
+                    :label="item.name + ' (' + item.email + ')'"
                     :value="item.id">
                   </el-option>
                 </el-select>
@@ -201,6 +201,7 @@ import HttpApiVersionDiff from "./version/HttpApiVersionDiff";
 import {createComponent} from ".././jmeter/components";
 import {TYPE_TO_C} from "@/business/components/api/automation/scenario/Setting";
 import MsDialogFooter from "@/business/components/common/components/MsDialogFooter";
+import {getProjectMemberOption} from "@/network/user";
 
 const {Body} = require("@/business/components/api/definition/model/ApiTestModel");
 const Sampler = require("@/business/components/api/definition/components/jmeter/components/sampler/sampler");
@@ -220,7 +221,7 @@ export default {
   },
   data() {
     let validateURL = (rule, value, callback) => {
-      if (!this.httpForm.path.startsWith("/") || this.httpForm.path.match(/\s/) != null) {
+      if (!this.httpForm.path.startsWith("/")) {
         callback(this.$t('api_test.definition.request.path_valid_info'));
       }
       callback();
@@ -443,8 +444,8 @@ export default {
       });
     },
     getMaintainerOptions() {
-      this.$post('/user/project/member/tester/list', {projectId: getCurrentProjectID()}, response => {
-        this.maintainerOptions = response.data;
+      getProjectMemberOption(data => {
+        this.maintainerOptions = data;
       });
     },
     setParameter() {
@@ -467,8 +468,12 @@ export default {
           }
           this.$emit('saveApi', this.httpForm);
           this.count = 0;
-          this.$store.state.apiMap.delete(this.httpForm.id);
+          this.$store.state.apiStatus.set("fromChange", false);
+          this.$store.state.apiMap.set(this.httpForm.id, this.$store.state.apiStatus);
         } else {
+          if (this.$refs.versionHistory) {
+            this.$refs.versionHistory.loading = false;
+          }
           return false;
         }
       });
@@ -494,11 +499,21 @@ export default {
     getURL(urlStr) {
       try {
         let url = new URL(urlStr);
-        url.searchParams.forEach((value, key) => {
-          if (key) {
-            this.request.arguments.splice(0, 0, new KeyValue({name: key, required: false, value: value}));
-          }
-        });
+        if (url.search && url.search.length > 1) {
+          let params = url.search.substr(1).split("&");
+          params.forEach(param => {
+            if (param) {
+              let keyValues = param.split("=");
+              if (keyValues) {
+                this.request.arguments.splice(0, 0, new KeyValue({
+                  name: keyValues[0],
+                  required: false,
+                  value: keyValues[1]
+                }));
+              }
+            }
+          });
+        }
         return url;
       } catch (e) {
         this.$error(this.$t('api_test.request.url_invalid'), 2000);
@@ -565,10 +580,12 @@ export default {
       });
     },
     compare(row) {
+      this.httpForm.createTime = this.$refs.versionHistory.versionOptions.filter(v => v.id === this.httpForm.versionId)[0].createTime;
       this.$get('/api/definition/get/' + row.id + "/" + this.httpForm.refId, response => {
         this.$get('/api/definition/get/' + response.data.id, res => {
           if (res.data) {
             this.newData = res.data;
+            this.newData.createTime = row.createTime;
             this.dealWithTag(res.data);
             this.setRequest(res.data);
             if (!this.setRequest(res.data)) {
@@ -675,7 +692,6 @@ export default {
       // 创建新版本
       this.httpForm.versionId = row.id;
       this.httpForm.versionName = row.name;
-
       this.$set(this.httpForm, 'newVersionRemark', !!this.httpForm.remark);
       this.$set(this.httpForm, 'newVersionDeps', this.$refs.apiOtherInfo.relationshipCount > 0);
       this.$set(this.httpForm, 'newVersionCase', this.httpForm.caseTotal > 0);
@@ -688,6 +704,13 @@ export default {
           this.createNewVersionVisible = true;
         } else {
           this.saveApi();
+          if (this.$refs.versionHistory) {
+            this.$refs.versionHistory.loading = false;
+          }
+        }
+      },error => {
+        if (this.$refs.versionHistory) {
+          this.$refs.versionHistory.loading = false;
         }
       });
     },

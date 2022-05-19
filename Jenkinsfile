@@ -1,7 +1,7 @@
 pipeline {
     agent {
         node {
-            label 'metersphere-buildx'
+            label 'metersphere'
         }
     }
     options { quietPeriod(600) }
@@ -16,9 +16,9 @@ pipeline {
                     sh '''
                         export JAVA_HOME=/opt/jdk-11
                         export CLASSPATH=$JAVA_HOME/lib:$CLASSPATH
-                        export PATH=$JAVA_HOME/bin:$PATH
+                        export PATH=$JAVA_HOME/bin:/opt/mvnd/bin:$PATH
                         java -version
-                        ./mvnw clean package --settings ./settings.xml
+                        mvnd clean package -Drevision=${BRANCH_NAME} -DskipAntRunForJenkins --settings ./settings.xml
                         mkdir -p backend/target/dependency && (cd backend/target/dependency; jar -xf ../*.jar)
                     '''
                 }
@@ -26,7 +26,9 @@ pipeline {
         }
         stage('Docker build & push') {
             steps {
-                 sh "docker buildx build --build-arg MS_VERSION=\${TAG_NAME:-\$BRANCH_NAME}-\${GIT_COMMIT:0:8} -t ${IMAGE_PREFIX}/${IMAGE_NAME}:\${TAG_NAME:-\$BRANCH_NAME} --platform linux/amd64,linux/arm64 . --push"
+                sh '''
+                 su - metersphere -c "cd ${WORKSPACE} && docker buildx build --build-arg MS_VERSION=\${TAG_NAME:-\$BRANCH_NAME}-\${GIT_COMMIT:0:8} -t ${IMAGE_PREFIX}/${IMAGE_NAME}:\${TAG_NAME:-\$BRANCH_NAME} --platform linux/amd64,linux/arm64 . --push"
+                '''
             }
         }
     }

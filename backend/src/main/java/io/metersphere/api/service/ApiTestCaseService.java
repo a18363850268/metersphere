@@ -2,8 +2,8 @@ package io.metersphere.api.service;
 
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
+import com.alibaba.fastjson.parser.Feature;
 import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.metersphere.api.dto.ApiCaseEditRequest;
 import io.metersphere.api.dto.DeleteCheckResult;
@@ -35,7 +35,9 @@ import io.metersphere.service.FileService;
 import io.metersphere.service.UserService;
 import io.metersphere.track.request.testcase.ApiCaseRelevanceRequest;
 import io.metersphere.track.service.TestPlanService;
+import org.apache.commons.beanutils.BeanComparator;
 import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.collections4.comparators.FixedOrderComparator;
 import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.ibatis.session.ExecutorType;
@@ -102,6 +104,8 @@ public class ApiTestCaseService {
     private ExtProjectVersionMapper extProjectVersionMapper;
     @Resource
     private TcpApiParamService tcpApiParamService;
+    @Resource
+    private ObjectMapper mapper;
 
     private static final String BODY_FILE_DIR = FileUtils.BODY_FILE_DIR;
 
@@ -143,7 +147,7 @@ public class ApiTestCaseService {
             if (environment != null) {
                 apiCase.setEnvironment(environment.getName());
             }
-            if(apiCase.getExecResult() == null && StringUtils.isNotEmpty(apiCase.getStatus()) && !StringUtils.equalsIgnoreCase(apiCase.getStatus(),"trash")){
+            if (apiCase.getExecResult() == null && StringUtils.isNotEmpty(apiCase.getStatus()) && !StringUtils.equalsIgnoreCase(apiCase.getStatus(), "trash")) {
                 apiCase.setExecResult(apiCase.getStatus());
             }
         }
@@ -229,7 +233,7 @@ public class ApiTestCaseService {
                     caseResult.setUpdateUser(updateUser.getName());
                 }
                 //检查用例的执行状态是否是null（如果报告被删除）。 如果执行结果是null，取记录最后执行状态的status字段
-                if(caseResult.getExecResult() == null && StringUtils.isNotEmpty(caseResult.getStatus()) && !StringUtils.equalsIgnoreCase(caseResult.getStatus(),"trash")){
+                if (caseResult.getExecResult() == null && StringUtils.isNotEmpty(caseResult.getStatus()) && !StringUtils.equalsIgnoreCase(caseResult.getStatus(), "trash")) {
                     caseResult.setExecResult(caseResult.getStatus());
                 }
             });
@@ -713,7 +717,7 @@ public class ApiTestCaseService {
             ApiTestCaseMapper batchMapper = sqlSession.getMapper(ApiTestCaseMapper.class);
 
             bloBs.forEach(apiTestCase -> {
-                JSONObject req = JSON.parseObject(apiTestCase.getRequest());
+                JSONObject req = JSON.parseObject(apiTestCase.getRequest(), Feature.DisableSpecialKeyDetect);
                 req.put("useEnvironment", request.getEnvId());
                 String requestStr = JSON.toJSONString(req);
                 apiTestCase.setRequest(requestStr);
@@ -734,12 +738,10 @@ public class ApiTestCaseService {
             SqlSession sqlSession = sqlSessionFactory.openSession(ExecutorType.BATCH);
             ApiTestCaseMapper batchMapper = sqlSession.getMapper(ApiTestCaseMapper.class);
 
-            ObjectMapper mapper = new ObjectMapper();
-            mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
             bloBs.forEach(apiTestCase -> {
-                MsHTTPSamplerProxy req = JSON.parseObject(apiTestCase.getRequest(), MsHTTPSamplerProxy.class);
+                MsHTTPSamplerProxy req = JSON.parseObject(apiTestCase.getRequest(), MsHTTPSamplerProxy.class, Feature.DisableSpecialKeyDetect);
                 try {
-                    JSONObject element = JSON.parseObject(apiTestCase.getRequest());
+                    JSONObject element = JSON.parseObject(apiTestCase.getRequest(), Feature.DisableSpecialKeyDetect);
                     ElementUtil.dataFormatting(element);
 
                     if (element != null && StringUtils.isNotEmpty(element.getString("hashTree"))) {
@@ -818,6 +820,11 @@ public class ApiTestCaseService {
                 esbApiParamService.handleApiEsbParams(model);
             }
         }
+        // 排序
+        FixedOrderComparator<String> fixedOrderComparator = new FixedOrderComparator<String>(request.getIds());
+        fixedOrderComparator.setUnknownObjectBehavior(FixedOrderComparator.UnknownObjectBehavior.BEFORE);
+        BeanComparator beanComparator = new BeanComparator("id", fixedOrderComparator);
+        Collections.sort(list, beanComparator);
 
         return list;
     }

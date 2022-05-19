@@ -1,14 +1,23 @@
 package io.metersphere.api.dto.automation.parse;
 
+import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
+import com.alibaba.fastjson.parser.Feature;
 import io.metersphere.api.dto.automation.ApiScenarioModuleDTO;
 import io.metersphere.api.dto.definition.ApiDefinitionResult;
 import io.metersphere.api.dto.definition.parse.ms.NodeTree;
+import io.metersphere.api.dto.definition.response.HttpResponse;
+import io.metersphere.api.dto.scenario.Body;
+import io.metersphere.api.dto.scenario.KeyValue;
+import io.metersphere.api.parse.ApiImportAbstractParser;
 import io.metersphere.api.service.ApiDefinitionService;
 import io.metersphere.api.service.ApiScenarioModuleService;
 import io.metersphere.api.service.ApiTestCaseService;
-import io.metersphere.base.domain.*;
+import io.metersphere.base.domain.ApiDefinition;
+import io.metersphere.base.domain.ApiDefinitionExample;
+import io.metersphere.base.domain.ApiScenarioModule;
+import io.metersphere.base.domain.ApiTestCaseWithBLOBs;
 import io.metersphere.base.mapper.ApiDefinitionMapper;
 import io.metersphere.base.mapper.ApiTestCaseMapper;
 import io.metersphere.commons.constants.APITestStatus;
@@ -119,12 +128,14 @@ public class ApiScenarioImportUtil {
     private static ApiDefinition getApiDefinitionResult(JSONObject object, ApiDefinitionService apiDefinitionService,Map<String,ApiDefinition>definitionMap,Set<String> userRelatedProjectIds) {
         List<String> projectIds = new ArrayList<>(userRelatedProjectIds);
         ApiDefinitionExample apiDefinitionExample = new ApiDefinitionExample();
-        apiDefinitionExample.createCriteria()
-                .andPathEqualTo(object.getString("path"))
-                .andMethodEqualTo(object.getString("method"))
-                .andProtocolEqualTo(object.getString("protocol"))
-                .andProjectIdIn(projectIds)
-                .andStatusNotEqualTo("Trash");
+        if(object.getString("path") != null && object.getString("method") != null){
+            apiDefinitionExample.createCriteria()
+                    .andPathEqualTo(object.getString("path"))
+                    .andMethodEqualTo(object.getString("method"))
+                    .andProtocolEqualTo(object.getString("protocol"))
+                    .andProjectIdIn(projectIds)
+                    .andStatusNotEqualTo("Trash");
+        }
         ApiDefinition apiDefinition = apiDefinitionService.getApiDefinition(apiDefinitionExample);
         if(apiDefinition==null){
             if(MapUtils.isEmpty(definitionMap)){
@@ -162,7 +173,7 @@ public class ApiScenarioImportUtil {
 
     public static ApiDefinitionResult structureApiDefinitionByJson(int i,ApiDefinitionService apiDefinitionService,JSONObject object, String versionId, String projectId,ApiDefinitionMapper apiDefinitionMapper,Map<String,ApiDefinition>definitionMap) {
         ApiDefinitionResult test = new ApiDefinitionResult();
-        apiDefinitionService.checkQuota();
+        apiDefinitionService.checkQuota(projectId);
         String protocal = object.getString("protocal");
         if (StringUtils.equals(protocal, "DUBBO")) {
             test.setMethod("dubbo://");
@@ -180,7 +191,15 @@ public class ApiScenarioImportUtil {
         test.setId(id);
         test.setNum(apiDefinitionService.getNextNum(projectId)+i);
         test.setName(object.getString("name"));
-        test.setPath(object.getString("path"));
+        if(StringUtils.isBlank(object.getString("path"))){
+            if(StringUtils.isNotBlank(object.getString("url"))){
+                ApiImportAbstractParser apiImportAbstractParser = CommonBeanFactory.getBean(ApiImportAbstractParser.class);
+                String path = apiImportAbstractParser.formatPath(object.getString("url"));
+                test.setPath(path);
+            }
+        }else{
+            test.setPath(object.getString("path"));
+        }
         test.setCreateUser(SessionUtils.getUserId());
         test.setProjectId(projectId);
         test.setCreateTime(System.currentTimeMillis());
@@ -193,20 +212,20 @@ public class ApiScenarioImportUtil {
         object.put("resourceId", test.getId());
         object.put("projectId", projectId);
         object.put("useEnvironment","");
-        JSONObject objectNew = JSONObject.parseObject(object.toJSONString());
+        object.put("environmentId","");
+        object.put("url","");
+        JSONObject objectNew = JSONObject.parseObject(object.toJSONString(), Feature.DisableSpecialKeyDetect);
         objectNew.remove("refType");
         objectNew.remove("referenced");
         test.setRequest(objectNew.toJSONString());
-        JSONObject obj = new JSONObject();
-        obj.put("type", object.get("protocol"));
-        obj.put("body", object.get("body"));
-        obj.put("headers", object.get("headers"));
-        Map<String,Boolean>map = new HashMap<>();
-        map.put("enable", true);
-        List<Map<String, Boolean>> list = new ArrayList<>();
-        list.add(map);
-        obj.put("statusCode", list);
-        test.setResponse(obj.toJSONString());
+        HttpResponse httpResponse = new HttpResponse();
+        KeyValue keyValue =  new KeyValue();
+        List<KeyValue> list = new ArrayList<>();
+        list.add(keyValue);
+        httpResponse.setHeaders(list);
+        httpResponse.setStatusCode(list);
+        httpResponse.setBody(new Body());
+        test.setResponse(JSON.toJSONString(httpResponse));
         test.setUserId(SessionUtils.getUserId());
         test.setLatest(true);
         test.setOrder(apiDefinitionService.getImportNextOrder(projectId));
@@ -236,7 +255,8 @@ public class ApiScenarioImportUtil {
         object.put("resourceId", apiTestCase.getId());
         object.put("projectId", projectId);
         object.put("useEnvironment","");
-        JSONObject objectNew = JSONObject.parseObject(object.toJSONString());
+        object.put("environmentId","");
+        JSONObject objectNew = JSONObject.parseObject(object.toJSONString(),Feature.DisableSpecialKeyDetect);
         objectNew.remove("refType");
         objectNew.remove("referenced");
         apiTestCase.setRequest(objectNew.toJSONString());

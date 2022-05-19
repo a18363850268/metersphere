@@ -53,6 +53,7 @@
         <ms-table-column
           prop="status"
           :filters="statusFilters"
+          :filtered-value="['Prepare', 'Underway', 'Finished', 'Completed']"
           column-key="status"
           :field="item"
           :fields-width="fieldsWidth"
@@ -184,14 +185,6 @@
           </template>
         </ms-table-column>
         <ms-table-column
-          prop="executionTimes"
-          :field="item"
-          :fields-width="fieldsWidth"
-          sortable
-          :label="$t('commons.execution_times')"
-          min-width="160px">
-        </ms-table-column>
-        <ms-table-column
           prop="testPlanTestCaseCount"
           :field="item"
           :fields-width="fieldsWidth"
@@ -272,9 +265,12 @@
         </ms-table-column>
       </span>
       <template v-slot:opt-before="scope">
-        <ms-table-operator-button :tip="$t('api_test.run')" icon="el-icon-video-play" class="run-button"
+        <ms-table-operator-button :tip="$t('api_test.run')" icon="el-icon-video-play"  :class="[scope.row.status==='Archived'?'disable-run':'run-button']"  :disabled="scope.row.status === 'Archived'"
                                   @exec="handleRun(scope.row)" v-permission="['PROJECT_TRACK_PLAN:READ+RUN']"
-                                  style="margin-right: 10px;"/>
+                                  />
+        <ms-table-operator-button :tip="$t('commons.edit')" icon="el-icon-edit"
+                                  @exec="handleEdit(scope.row)" v-permission="['PROJECT_TRACK_PLAN:READ+EDIT']" :disabled="scope.row.status === 'Archived'"
+                                  style="margin-right: 10px"/>
       </template>
       <template v-slot:opt-behind="scope">
         <el-tooltip :content="$t('commons.follow')" placement="bottom" effect="dark" v-if="!scope.row.showFollow">
@@ -293,10 +289,10 @@
             <el-icon class="el-icon-more"></el-icon>
           </el-link>
           <el-dropdown-menu slot="dropdown">
-            <el-dropdown-item command="delete" v-permission="['PROJECT_TRACK_PLAN:READ+DELETE']">
+            <el-dropdown-item command="delete" v-permission="['PROJECT_TRACK_PLAN:READ+DELETE']" >
               {{ $t('commons.delete') }}
             </el-dropdown-item>
-            <el-dropdown-item command="schedule_task" v-permission="['PROJECT_TRACK_PLAN:READ+SCHEDULE']">
+            <el-dropdown-item command="schedule_task" v-permission="['PROJECT_TRACK_PLAN:READ+SCHEDULE']" :disabled="scope.row.status === 'Archived'" >
               {{ $t('commons.trigger_mode.schedule') }}
             </el-dropdown-item>
           </el-dropdown-menu>
@@ -310,12 +306,30 @@
                        :with-tip="enableDeleteTip">
       {{ $t('test_track.plan.plan_delete_tip') }}
     </ms-delete-confirm>
-    <ms-test-plan-schedule-maintain ref="scheduleMaintain" @refreshTable="initTableData"/>
+    <ms-test-plan-schedule-maintain ref="scheduleMaintain" @refreshTable="initTableData" :plan-case-ids="[]"
+                                    :type="'plan'"/>
     <ms-test-plan-schedule-batch-switch ref="scheduleBatchSwitch" @refresh="refresh"/>
     <plan-run-mode-with-env @handleRunBatch="_handleRun" ref="runMode" :plan-case-ids="[]" :type="'plan'"
-                            :plan-id="currentPlanId"/>
+                            :plan-id="currentPlanId" :show-save="true"/>
     <test-plan-report-review ref="testCaseReportView"/>
     <ms-task-center ref="taskCenter" :show-menu="false"/>
+    <el-dialog
+      :visible.sync="showExecute"
+      destroy-on-close
+      :title="$t('load_test.runtime_config')"
+      width="550px"
+      @close="closeExecute">
+      <div>
+        <el-radio-group v-model="batchExecuteType">
+          <el-radio label="serial">{{ $t("run_mode.serial") }}</el-radio>
+          <el-radio label="parallel">{{ $t("run_mode.parallel") }}</el-radio>
+        </el-radio-group>
+      </div><br/>
+      <span>注：运行模式仅对测试计划间有效</span>
+      <template v-slot:footer>
+        <ms-dialog-footer @cancel="closeExecute" @confirm="handleRunBatch"/>
+      </template>
+    </el-dialog>
   </el-card>
 </template>
 
@@ -382,6 +396,7 @@ export default {
       result: {},
       cardResult: {},
       enableDeleteTip: false,
+      showExecute:false,
       queryPath: "/test/plan/list",
       deletePath: "/test/plan/delete",
       condition: {
@@ -422,15 +437,14 @@ export default {
           name: this.$t('test_track.plan.test_plan_batch_switch'),
           handleClick: this.handleBatchSwitch,
           permissions: ['PROJECT_TRACK_PLAN:READ+SCHEDULE']
+        },
+        {
+          name: this.$t('api_test.automation.batch_execute'),
+          handleClick: this.handleBatchExecute,
+          permissions: ['PROJECT_TRACK_PLAN:READ+SCHEDULE']
         }
       ],
       simpleOperators: [
-        {
-          tip: this.$t('commons.edit'),
-          icon: "el-icon-edit",
-          exec: this.handleEdit,
-          permissions: ['PROJECT_TRACK_PLAN:READ+EDIT']
-        },
         {
           tip: this.$t('commons.copy'),
           icon: "el-icon-copy-document",
@@ -443,7 +457,8 @@ export default {
           exec: this.openReport,
           permission: ['PROJECT_TRACK_PLAN:READ+EDIT']
         },
-      ]
+      ],
+      batchExecuteType:"serial"
     };
   },
   watch: {
@@ -592,6 +607,38 @@ export default {
         this.$refs.scheduleBatchSwitch.open(param, size, this.condition.selectAll, this.condition);
       }
     },
+    handleBatchExecute(){
+      this.showExecute = true;
+    },
+    handleRunBatch(){
+      this.showExecute = false;
+      let mode = this.batchExecuteType;
+      let param = {mode};
+      const ids = [];
+      if (this.condition.selectAll) {
+        param.isAll = true;
+        param.queryTestPlanRequest = this.condition
+      }
+      else {
+        this.$refs.testPlanLitTable.selectRows.forEach((item) => {
+          ids.push(item.id)
+        });
+      }
+      param.testPlanId = this.currentPlanId;
+      param.projectId = getCurrentProjectID();
+      param.userId = getCurrentUserId();
+      param.requestOriginator = "TEST_PLAN";
+      param.testPlanIds = ids;
+      this.result = this.$post('/test/plan/run/batch/', param, () => {
+        this.$refs.taskCenter.open();
+        this.$success(this.$t('commons.run_success'));
+      }, error => {
+        // this.$error(error.message);
+      });
+    },
+    closeExecute(){
+      this.showExecute = false;
+    },
     statusChange(data) {
       if (!hasPermission('PROJECT_TRACK_PLAN:READ+EDIT')) {
         return;
@@ -732,12 +779,17 @@ export default {
       param.environmentType = environmentType;
       param.environmentGroupId = environmentGroupId;
       param.requestOriginator = "TEST_PLAN";
-      this.$refs.taskCenter.open();
-      this.result = this.$post('test/plan/run/', param, () => {
-        this.$success(this.$t('commons.run_success'));
-      }, error => {
-        // this.$error(error.message);
-      });
+      if(config.isRun === true){
+        this.$refs.taskCenter.open();
+        this.result = this.$post('test/plan/run/', param, () => {
+          this.$success(this.$t('commons.run_success'));
+        });
+      }else{
+        this.result = this.$post('test/plan/edit/runModeConfig', param, () => {
+          this.$success(this.$t('commons.save_success'));
+        });
+      }
+
     },
     saveFollow(row) {
       if (row.showFollow) {

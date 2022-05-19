@@ -78,6 +78,16 @@
                 <property name="object" value="${condition}.reviewStatus"/>
             </include>
         </if>
+        <if test="${condition}.customs != null and ${condition}.customs.size() > 0">
+            <foreach collection="${condition}.customs" item="custom" separator="" open="" close="">
+                and test_case.id in (
+                    select resource_id from custom_field_test_case where field_id = #{custom.id}
+                    and trim(both '"' from value)
+                    <include refid="io.metersphere.base.mapper.ext.ExtBaseMapper.condition">
+                        <property name="object" value="custom"/>
+                    </include>)
+            </foreach>
+        </if>
     </sql>
     <update id="updateTestCaseCustomNumByProjectId">
         update test_case set custom_num = num where (custom_num is null or custom_num = '') and project_id = #{projectId}
@@ -196,7 +206,7 @@
             test_case.other_test_name, test_case.review_status, test_case.tags,
             test_case.demand_id, test_case.demand_name, test_case.`status`,
             test_case.custom_num, test_case.step_model, test_case.create_user,
-            test_case.custom_fields, test_case.ref_id
+            test_case.ref_id
         </if>
         from test_case
         left join project_version on project_version.id = test_case.version_id
@@ -205,38 +215,7 @@
     </select>
 
     <select id="publicList" resultType="io.metersphere.track.dto.TestCaseDTO">
-        SELECT test_case.versionName,
-        test_case.versionId,
-        test_case.createName,
-        test_case.projectName,
-        test_case.id,
-        test_case.node_id,
-        test_case.node_path,
-        test_case.project_id,
-        test_case.`name`,
-        test_case.`type`,
-        test_case.maintainer,
-        test_case.priority,
-        test_case.`method`,
-        test_case.create_time,
-        test_case.update_time,
-        test_case.test_id,
-        test_case.sort,
-        test_case.num,
-        test_case.other_test_name,
-        test_case.review_status,
-        test_case.tags,
-        test_case.demand_id,
-        test_case.demand_name,
-        test_case.`status`,
-        test_case.custom_num,
-        test_case.step_model,
-        test_case.create_user,
-        test_case.custom_fields,
-        test_case.case_public ,
-        test_case.ref_id
-         from
-        (select
+       select
         project_version.name as versionName,
         project_version.id as versionId,
         <if test="request.selectFields != null and request.selectFields.size() > 0">
@@ -258,14 +237,7 @@
         left join (select id,workspace_id,NAME from project where workspace_id =#{request.workspaceId})
         project on test_case.project_id = project.id
         left join project_version on project.id = project_version.project_id and project_version.id =
-        test_case.version_id where test_case.case_public = true
-        ) test_case right join
-        (select
-        max(test_case.update_time) update_time , ref_id
-        from test_case
-        left join (select id,workspace_id,NAME from project where workspace_id =#{request.workspaceId})
-        project on test_case.project_id = project.id where test_case.case_public = true group by test_case.ref_id
-        ) tmp on test_case.update_time = tmp.update_time and test_case.ref_id = tmp.ref_id
+        test_case.version_id
         <where>
             <include refid="filters"/>
             <if test="request.combine != null">
@@ -319,6 +291,9 @@
             <if test="request.caseCoverage == 'coverage' ">
                 and test_case.id in (select distinct test_case_test.test_case_id from test_case_test)
             </if>
+            <include refid="queryVersionCondition">
+                <property name="versionTable" value="test_case"/>
+            </include>
         </where>
 
         <include refid="io.metersphere.base.mapper.ext.ExtBaseMapper.orders"/>
@@ -417,8 +392,13 @@
     <select id="selectPublicIds" resultType="java.lang.String">
         select test_case.id from
         (select
-        test_case.id,test_case.update_time, test_case.ref_id , test_case.`status` , test_case.case_public ,
-        test_case.project_id
+        test_case.id, test_case.node_id, test_case.node_path, test_case.project_id, test_case.`name`,
+        test_case.`type`, test_case.maintainer, test_case.priority, test_case.`method`,
+        test_case.create_time, test_case.update_time, test_case.test_id, test_case.sort, test_case.num,
+        test_case.other_test_name, test_case.review_status, test_case.tags,
+        test_case.demand_id, test_case.demand_name, test_case.`status`,
+        test_case.custom_num, test_case.step_model, test_case.create_user,
+        test_case.custom_fields,test_case.case_public,test_case.ref_id ,test_case.`order`
         from test_case left join project on test_case.project_id = project.id) test_case
         right join (select
         max(test_case.update_time) update_time , ref_id
@@ -448,12 +428,7 @@
                 or test_case.tags like CONCAT('%', #{request.name},'%')
                 or test_case.custom_num like CONCAT('%', #{request.name},'%'))
             </if>
-            <if test="request.ids != null">
-                and test_case.id in
-                <foreach collection="request.ids" item="id" separator="," open="(" close=")">
-                    #{id}
-                </foreach>
-            </if>
+
             <if test="request.relevanceCreateTime >0">
                 and test_case.id in (select test_case_id from test_case_test where test_case_test.create_time >=
                 #{request.createTime})
@@ -470,9 +445,7 @@
             <if test="request.workspaceId != null">
                 AND test_case.project_id in (select id from project where workspace_id=#{request.workspaceId})
             </if>
-            <if test="request.projectId != null">
-                and test_case.project_id = #{request.projectId}
-            </if>
+
             <include refid="filters"/>
             <if test="request.caseCoverage == 'uncoverage' ">
                 and test_case.id not in (select distinct test_case_test.test_case_id from test_case_test)
@@ -939,6 +912,15 @@
         ORDER BY update_time DESC limit 1;
     </select>
 
+    <select id="getLastExecStatusByIdList" resultType="io.metersphere.track.dto.TestCaseDTO">
+        SELECT `status`, case_id as id
+        FROM test_plan_test_case
+        WHERE case_id IN
+        <foreach collection="ids" item="id" separator="," open="(" close=")">
+            #{id}
+        </foreach>
+    </select>
+
     <select id="countByWorkSpaceId" resultType="java.lang.Integer">
         select count(distinct ref_id)
         from test_case
@@ -999,6 +981,13 @@
         </foreach>
     </select>
 
+    <select id="getForCompatibleCustomField" resultType="io.metersphere.track.dto.CustomFieldResourceCompatibleDTO">
+        select id, custom_fields
+        from test_case
+        where project_id = #{projectId}
+        limit #{offset},#{pageSize}
+    </select>
+
     <update id="addLatestVersion">
         UPDATE test_case
             INNER JOIN ((
@@ -1033,4 +1022,13 @@
             SET test_case.latest = TRUE
         WHERE ref_id = #{refId,jdbcType=VARCHAR}
     </update>
+
+    <select id="moduleExtraNodeCount" resultType="java.util.Map">
+        select parent_id as moduleId, count(id) as countNum from minder_extra_node
+        where parent_id in
+        <foreach collection="nodeIds" item="id" open="(" close=")" separator=",">
+            #{id}
+        </foreach>
+        GROUP BY parent_id
+    </select>
 </mapper>

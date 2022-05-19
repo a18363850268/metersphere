@@ -70,7 +70,8 @@ public abstract class AbstractIssuePlatform implements IssuesPlatform {
     protected String userId;
     protected String defaultCustomFields;
     protected boolean isThirdPartTemplate;
-
+    protected CustomFieldIssuesService customFieldIssuesService;
+    protected CustomFieldService customFieldService;
 
     public String getKey() {
         return key;
@@ -114,6 +115,8 @@ public abstract class AbstractIssuePlatform implements IssuesPlatform {
         this.extIssuesMapper = CommonBeanFactory.getBean(ExtIssuesMapper.class);
         this.resourceService = CommonBeanFactory.getBean(ResourceService.class);
         this.testCaseIssueService = CommonBeanFactory.getBean(TestCaseIssueService.class);
+        this.customFieldIssuesService = CommonBeanFactory.getBean(CustomFieldIssuesService.class);
+        this.customFieldService = CommonBeanFactory.getBean(CustomFieldService.class);
         this.restTemplateIgnoreSSL = restTemplate;
     }
 
@@ -334,6 +337,32 @@ public abstract class AbstractIssuePlatform implements IssuesPlatform {
         return result;
     }
 
+    /**
+     * 转译字符串中的特殊字符
+     * @param str
+     * @return
+     */
+    protected String transferSpecialCharacter(String str) {
+        String regEx="[`~!@#$%^&*()+=|{}':;',\\[\\].<>/?~！@#￥%……&*（）——+|{}【】‘；：”“’。，、？]";
+        Pattern pattern = Pattern.compile(regEx);
+        Matcher matcher = pattern.matcher(str);
+        if(matcher.find()){
+            CharSequence cs = str;
+            int j =0;
+            for(int i=0; i< cs.length(); i++){
+                String temp = String.valueOf(cs.charAt(i));
+                Matcher m2 = pattern.matcher(temp);
+                if(m2.find()){
+                    StringBuilder sb = new StringBuilder(str);
+                    str = sb.insert(j, "\\").toString();
+                    j++;
+                }
+                j++; //转义完成后str的长度增1
+            }
+        }
+        return str;
+    }
+
     public List<File> getImageFiles(String input) {
         List<File> files = new ArrayList<>();
         String regex = "(\\!\\[.*?\\]\\((.*?)\\))";
@@ -373,7 +402,11 @@ public abstract class AbstractIssuePlatform implements IssuesPlatform {
         List<CustomFieldItemDTO> customFields = CustomFieldService.getCustomFields(issuesRequest.getCustomFields());
         customFields.forEach(item -> {
             if (StringUtils.isNotBlank(item.getCustomData())) {
-                paramMap.add(item.getCustomData(), item.getValue());
+                if (item.getValue() instanceof String) {
+                    paramMap.add(item.getCustomData(), ((String) item.getValue()).trim());
+                } else {
+                    paramMap.add(item.getCustomData(), item.getValue());
+                }
             }
         });
     }

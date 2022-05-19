@@ -1,11 +1,10 @@
 <template>
   <span>
     <slot name="header"></slot>
-    <el-input :placeholder="$t('commons.search_by_name_or_id')" @blur="initTable" class="search-input" size="small"
-              @keyup.enter.native="initTable" v-model="condition.name"/>
-    <ms-table-adv-search-bar :condition.sync="condition" class="adv-search-bar"
-                             v-if="condition.components !== undefined && condition.components.length > 0"
-                             @search="initTable"/>
+    <ms-search
+      :condition.sync="condition"
+      @search="initTable">
+    </ms-search>
 
     <ms-table :data="tableData" :select-node-ids="selectNodeIds" :condition="condition" :page-size="pageSize"
               :total="total" enableSelection @selectCountChange="selectCountChange"
@@ -67,21 +66,31 @@
       </ms-table-column>
 
       <ms-table-column
-        v-if="versionEnable"
-        :label="$t('project.version.name')"
-        :filters="versionFilters"
-        min-width="100px"
-        prop="versionId">
+          v-if="versionEnable"
+          :label="$t('project.version.name')"
+          :filters="versionFilters"
+          min-width="100px"
+          prop="versionId">
         <template v-slot:default="scope">
           <span>{{ scope.row.versionName }}</span>
         </template>
       </ms-table-column>
 
+       <ms-table-column
+           sortable="createTime"
+           width="160px"
+           :label="$t('commons.create_time')"
+           prop="createTime">
+          <template v-slot:default="scope">
+            <span>{{ scope.row.createTime | timestampFormatDate }}</span>
+          </template>
+        </ms-table-column>
+
       <ms-table-column
-        width="160"
-        :label="$t('api_test.definition.api_last_time')"
-        sortable="custom"
-        prop="updateTime">
+          width="160"
+          :label="$t('api_test.definition.api_last_time')"
+          sortable="custom"
+          prop="updateTime">
         <template v-slot:default="scope">
           <span>{{ scope.row.updateTime | timestampFormatDate }}</span>
         </template>
@@ -112,7 +121,6 @@ import MsBottomContainer from "../../../definition/components/BottomContainer";
 import ShowMoreBtn from "../../../../track/case/components/ShowMoreBtn";
 import MsBatchEdit from "../../../definition/components/basis/BatchEdit";
 import {API_METHOD_COLOUR} from "../../../definition/model/JsonData";
-import ApiListContainer from "../../../definition/components/list/ApiListContainer";
 import PriorityTableItem from "../../../../track/common/tableItems/planview/PriorityTableItem";
 import MsEnvironmentSelect from "../../../definition/components/case/MsEnvironmentSelect";
 import MsTableAdvSearchBar from "@/business/components/common/components/search/MsTableAdvSearchBar";
@@ -120,6 +128,7 @@ import {getProtocolFilter} from "@/business/components/api/definition/api-defini
 import {getProjectMember} from "@/network/user";
 import TableSelectCountBar from "@/business/components/api/automation/scenario/api/TableSelectCountBar";
 import {hasLicense} from "@/common/js/utils";
+import MsSearch from "@/business/components/common/components/search/MsSearch";
 
 export default {
   name: "ApiTableList",
@@ -127,7 +136,6 @@ export default {
     TableSelectCountBar,
     MsEnvironmentSelect,
     PriorityTableItem,
-    ApiListContainer,
     MsTableOperatorButton,
     MsTableOperator,
     MsTablePagination,
@@ -137,7 +145,8 @@ export default {
     MsBatchEdit,
     MsTable,
     MsTableColumn,
-    MsTableAdvSearchBar
+    MsTableAdvSearchBar,
+    MsSearch
   },
   data() {
     return {

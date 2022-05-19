@@ -132,8 +132,10 @@
           </div>
         </div>
         <div class="report-bottom">
-          <ms-table-pagination :change="init" :current-page.sync="currentPage" :page-size.sync="pageSize" :total="total"
+          <ms-table-pagination v-if="showType !== 'SCENARIO' && showType !== 'CASE'" :change="init"
+                               :current-page.sync="currentPage" :page-size.sync="pageSize" :total="total"
                                small/>
+          <span v-else> {{ $t('commons.task_center_remark') }}</span>
         </div>
       </el-card>
 
@@ -242,9 +244,9 @@ export default {
         let request = {type: row.executionModule, reportId: row.id};
         array = [request];
       } else {
-        array.push({type: 'API', projectId: getCurrentProjectID()});
-        array.push({type: 'SCENARIO', projectId: getCurrentProjectID()});
-        array.push({type: 'PERFORMANCE', projectId: getCurrentProjectID()});
+        array.push({type: 'API', projectId: getCurrentProjectID(),userId:getCurrentUser().id});
+        array.push({type: 'SCENARIO', projectId: getCurrentProjectID(),userId:getCurrentUser().id});
+        array.push({type: 'PERFORMANCE', projectId: getCurrentProjectID(),userId:getCurrentUser().id});
       }
       this.$post('/api/automation/stop/batch', array, response => {
         this.$success(this.$t('report.test_stop_success'));
@@ -405,6 +407,7 @@ export default {
         return;
       }
       this.condition.projectId = getCurrentProjectID();
+      this.condition.userId = getCurrentUser().id;
       this.result = this.$post('/task/center/list/' + this.currentPage + '/' + this.pageSize, this.condition, response => {
         this.total = response.data.itemCount;
         this.taskData = response.data.listObject;

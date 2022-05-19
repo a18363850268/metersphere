@@ -124,6 +124,25 @@ export const STATUS = {
   }
 }
 
+export const UI_REPORT_STATUS = {
+  key: "status",
+  name: 'MsTableSearchSelect',
+  label: 'commons.status',
+  operator: {
+    options: [OPERATORS.IN, OPERATORS.NOT_IN]
+  },
+  options: [
+    {label: "Saved", value: "Saved"},
+    {label: "Running", value: "Running"},
+    {label: 'Stopped', value: 'stop'},
+    {label: "Error", value: "Error"},
+    {label: "Success", value: "Success"}
+  ],
+  props: { // 尾部控件的props，一般为element ui控件的props
+    multiple: true
+  }
+}
+
 export const API_STATUS = {
   key: "status",
   name: 'MsTableSearchSelect',
@@ -319,8 +338,8 @@ export const TRIGGER_MODE = {
   },
   options: [
     {label: "commons.trigger_mode.manual", value: "MANUAL"},
-    {label: "commons.trigger_mode.schedule", value: "SCHEDULE"},
-    {label: "commons.trigger_mode.api", value: "API"}
+    // {label: "commons.trigger_mode.schedule", value: "SCHEDULE"},
+    // {label: "commons.trigger_mode.api", value: "API"}
   ],
   props: {
     multiple: true
@@ -471,7 +490,9 @@ export const TEST_PLAN_STATUS = {
   options: [
     {label: 'test_track.plan.plan_status_prepare', value: 'Prepare'},
     {label: 'test_track.plan.plan_status_running', value: 'Underway'},
-    {label: 'test_track.plan.plan_status_completed', value: 'Completed'}
+    {label: 'test_track.plan.plan_status_completed', value: 'Completed'},
+    {label: 'test_track.plan.plan_status_finished', value: 'Finished'},
+    {label: 'test_track.plan.plan_status_archived', value: 'Archived'}
   ],
   props: {
     multiple: true
@@ -551,11 +572,34 @@ export const PLAN_CASE_STATUS = {
   }
 }
 
+export const PLATFORM = {
+  key: "platform",
+  name: 'MsTableSearchSelect',
+  label: "所属平台",
+  operator: {
+    options: [OPERATORS.IN, OPERATORS.NOT_IN]
+  },
+  options: [
+    {label: "Tapd", value: "Tapd"},
+    {label: "Jira", value: "Jira"},
+    {label: "Zentao", value: "Zentao"},
+    {label: "Local", value: "Local"},
+  ],
+  props: {
+    multiple: true
+  }
+}
+
+
 export const TEST_CONFIGS = [NAME, UPDATE_TIME, CREATE_TIME, STATUS, CREATOR];
 
 export const PROJECT_CONFIGS = [NAME, UPDATE_TIME, CREATE_TIME, CREATOR];
 
 export const REPORT_CONFIGS = [NAME, TEST_NAME, CREATE_TIME, STATUS, CREATOR, TRIGGER_MODE];
+
+export const REPORT_CASE_CONFIGS = [NAME, CREATE_TIME, STATUS, CREATOR, TRIGGER_MODE];
+
+export const UI_REPORT_CONFIGS = [NAME, TEST_NAME, CREATE_TIME, UI_REPORT_STATUS, CREATOR, TRIGGER_MODE];
 
 export const TEST_CASE_CONFIGS = [NAME, API_TAGS, MODULE, PRIORITY, CREATE_TIME, UPDATE_TIME, CREATOR, CASE_REVIEW_STATUS];
 
@@ -583,3 +627,10 @@ export const TEST_PLAN_RELEVANCE_LOAD_CASE= [NAME, STATUS, CREATE_TIME, UPDATE_T
 export const TEST_CASE_RELEVANCE_API_CASE_CONFIGS = [NAME, API_CASE_PRIORITY, API_TAGS, CREATOR];
 export const TEST_CASE_RELEVANCE_API_SCENARIO_CONFIGS = [NAME, API_CASE_PRIORITY, API_TAGS, CREATOR];
 export const TEST_CASE_RELEVANCE_LOAD_CASE= [NAME, STATUS, CREATE_TIME, UPDATE_TIME, CREATOR];
+
+
+// 测试跟踪-缺陷管理-缺陷列表
+export const TEST_TRACK_ISSUE_LIST = [NAME, PLATFORM, CREATE_TIME, CREATOR];
+
+// 测试跟踪-测试用例-关联缺陷
+export const TEST_CASE_RELEVANCE_ISSUE_LIST = [NAME, PLATFORM, CREATE_TIME, CREATOR];

@@ -136,7 +136,7 @@ import {
   LOG_MODULE_MAP,
   LOG_TYPE,
   LOG_TYPE_MAP,
-  SYSLIST
+  PROJECTSYSLIST
 } from "@/business/components/settings/operatinglog/config";
 import MsLogDetail from "@/business/components/settings/operatinglog/LogDetail";
 import MsMainContainer from "@/business/components/common/components/MsMainContainer";
@@ -160,14 +160,16 @@ export default {
       pageSize: 10,
       total: 0,
       items: [],
-      condition: {},
+      condition: {
+        times: [new Date().getTime() - 3600 * 1000 * 24 * 7, new Date().getTime()],
+      },
       tableData: [],
       userList: [],
       screenHeight: 'calc(100vh - 215px)',
       LOG_TYPE: new LOG_TYPE(this),
       LOG_TYPE_MAP: new LOG_TYPE_MAP(this),
       LOG_MODULE_MAP: new LOG_MODULE_MAP(this),
-      sysList: new SYSLIST(),
+      sysList: new PROJECTSYSLIST(),
     }
   },
   mounted() {

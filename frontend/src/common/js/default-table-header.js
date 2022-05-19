@@ -89,10 +89,10 @@ export let CUSTOM_TABLE_HEADER = {
     {id: 'level', key: '3', label: 'api_test.automation.case_level'},
     {id: 'status', key: '4', label: 'test_track.plan.plan_status'},
     {id: 'tags', key: '5', label: 'commons.tag'},
-    {id: 'versionId', key: 'f', label: 'project.version.name', xpack: true},
+    // {id: 'versionId', key: 'f', label: 'project.version.name', xpack: true},
     {id: 'creatorName', key: 'd', label: 'api_test.automation.creator'},
     {id: 'principalName', key: '6', label: 'api_test.definition.api_principal'},
-    {id: 'environmentMap', key: 'e', label: 'commons.environment'},
+    // {id: 'environmentMap', key: 'e', label: 'commons.environment'},
     {id: 'updateTime', key: '7', label: 'api_test.definition.api_last_time'},
     {id: 'stepTotal', key: '8', label: 'api_test.automation.step'},
     {id: 'lastResult', key: 'a', label: 'api_test.automation.last_result'},
@@ -104,7 +104,7 @@ export let CUSTOM_TABLE_HEADER = {
     {id: 'name', key: '1', label: 'test_track.review.review_name'},
     {id: 'reviewer', key: '2', label: 'test_track.review.reviewer'},
     {id: 'projectName', key: '3', label: 'test_track.review.review_project'},
-    {id: 'creatorName', key: '4', label: 'test_track.review.review_creator'},
+    {id: 'creatorName', key: '4', label: 'test_track.review.creator'},
     {id: 'status', key: '5', label: 'test_track.review.review_status'},
     {id: 'createTime', key: '6', label: 'commons.create_time'},
     {id: 'endTime', key: '7', label: 'test_track.review.end_time'},
@@ -137,7 +137,6 @@ export let CUSTOM_TABLE_HEADER = {
     {id: 'actualEndTime', key: 'a', label: 'test_track.plan.actual_end_time'},
     {id: 'tags', key: 'b', label: 'commons.tag'},
     {id: 'scheduleStatus', key: 'c', label: 'commons.trigger_mode.schedule'},
-    {id: 'executionTimes', key: 'd', label: 'commons.execution_times'},
     {id: 'passRate', key: 'e', label: 'commons.pass_rate'},
     {id: 'createUser', key: 'f', label: 'commons.create_user'},
     {id: 'testPlanTestCaseCount', key: 'g', label: 'test_track.plan.test_plan_test_case_count'},
@@ -253,14 +252,58 @@ export let CUSTOM_TABLE_HEADER = {
 
   //缺陷列表
   ELEMENT_LIST: [
-    {id: 'num', key: '1', label: 'test_track.issue.id'},
+    {id: 'num', key: '1', label: 'ID'},
     {id: 'name', key: '2', label: '元素名称'},
-    {id: 'modulePath', key: '3', label: '所属页面'},
-    {id: 'locationType', key: '4', label: '定位类型'},
-    {id: 'location', key: '5', label: '元素定位'},
-    {id: 'creatorUser', key: '6', label: 'test_track.issue.issue_resource'},
-    {id: 'createTime', key: '7', label: 'commons.create_time'},
-    {id: 'updateTime', key: '8', label: 'commons.update_time'},
+    {id: 'locationType', key: '3', label: '定位类型'},
+    {id: 'location', key: '4', label: '元素定位'},
+    {id: 'createUser', key: '5', label: '创建人'},
+    {id: 'createTime', key: '6', label: 'commons.create_time'},
+    {id: 'updateTime', key: '7', label: 'commons.update_time'},
+  ],
+
+  //空间配额
+  QUOTA_WS_LIST: [
+    {id: 'workspaceName', key: 'a', label: 'commons.workspace'},
+    {id: 'api', key: 'b', label: 'quota.api'},
+    {id: 'performance', key: 'c', label: 'quota.performance'},
+    {id: 'maxThreads', key: 'd', label: 'quota.max_threads'},
+    {id: 'duration', key: 'e', label: 'quota.duration'},
+    {id: 'resourcePool', key: 'f', label: 'quota.resource_pool'},
+    {id: 'useDefault', key: 'j', label: 'quota.use_default'},
+    {id: 'vumTotal', key: 'h', label: 'quota.vum_total'},
+    {id: 'vumUsed', key: 'i', label: 'quota.vum_used'},
+    {id: 'member', key: 'g', label: 'quota.member'},
+    {id: 'project', key: 'k', label: 'quota.project'},
+  ],
+
+  //项目配额
+  QUOTA_PJ_LIST: [
+    {id: 'projectName', key: 'a', label: 'commons.project'},
+    {id: 'api', key: 'b', label: 'quota.api'},
+    {id: 'performance', key: 'c', label: 'quota.performance'},
+    {id: 'maxThreads', key: 'd', label: 'quota.max_threads'},
+    {id: 'duration', key: 'e', label: 'quota.duration'},
+    {id: 'resourcePool', key: 'f', label: 'quota.resource_pool'},
+    {id: 'useDefault', key: 'j', label: 'quota.use_default'},
+    {id: 'vumTotal', key: 'h', label: 'quota.vum_total'},
+    {id: 'vumUsed', key: 'i', label: 'quota.vum_used'},
+    {id: 'member', key: 'g', label: 'quota.member'},
+  ],
+
+  // 测试报告列表
+  PERFORMANCE_REPORT_TABLE: [
+    {id: 'testName', key: 'a', label: 'report.test_name'},
+    {id: 'name', key: 'b', label: 'commons.name'},
+    {id: 'versionId', key: 'c', label: 'project.version.name'},
+    {id: 'userName', key: 'd', label: 'report.user_name'},
+    {id: 'maxUsers', key: 'e', label: 'report.max_users'},
+    {id: 'avgResponseTime', key: 'f', label: 'report.response_time'},
+    {id: 'tps', key: 'g', label: 'TPS'},
+    {id: 'testStartTime', key: 'h', label: 'report.test_start_time'},
+    {id: 'testEndTime', key: 'i', label: 'report.test_end_time'},
+    {id: 'testDuration', key: 'j', label: 'report.test_execute_time'},
+    {id: 'triggerMode', key: 'k', label: 'test_track.report.list.trigger_mode'},
+    {id: 'status', key: 'l', label: 'commons.status'},
   ]
 
 }

@@ -2,18 +2,19 @@
   <div>
     <ms-module-minder
       v-loading="result.loading"
+      minder-key="TEST_CASE"
       :tree-nodes="treeNodes"
       :tags="tags"
-      minder-key="testCase"
       :select-node="selectNode"
       :distinct-tags="tags"
       :module-disable="false"
       :show-module-tag="true"
       :move-enable="moveEnable"
       :tag-edit-check="tagEditCheck()"
-      @afterMount="handleAfterMount"
       :priority-disable-check="priorityDisableCheck()"
       :disabled="disabled"
+      :get-extra-node-count="getMinderTreeExtraNodeCount()"
+      @afterMount="handleAfterMount"
       @save="save"
       ref="minder"
     />
@@ -54,7 +55,7 @@ import {
   tagEditCheck,
 } from "@/business/components/track/common/minder/minderUtils";
 import {getNodePath, getUUID, hasPermission} from "@/common/js/utils";
-import {getTestCasesForMinder, getMinderExtraNode} from "@/network/testCase";
+import {getTestCasesForMinder, getMinderExtraNode, getMinderTreeExtraNodeCount} from "@/network/testCase";
 import {addIssueHotBox, getSelectedNodeData, handleIssueAdd, handleIssueBatch} from "./minderUtils";
 import IssueRelateList from "@/business/components/track/case/components/IssueRelateList";
 import TestPlanIssueEdit from "@/business/components/track/case/components/TestPlanIssueEdit";
@@ -131,6 +132,9 @@ name: "TestCaseMinder",
     }
   },
   methods: {
+    getMinderTreeExtraNodeCount() {
+      return getMinderTreeExtraNodeCount;
+    },
     handleAfterMount() {
       listenNodeSelected(() => {
         // 点击模块，加载模块下的用例
@@ -323,7 +327,7 @@ name: "TestCaseMinder",
           nodes = [];
         }
         nodes.push(JSON.stringify(this._buildExtraNode(root)));
-        this.saveExtraNode[parent.id] = nodes;
+        this.saveExtraNode[parent.newId ? parent.newId : parent.id] = nodes;
       }
     },
     buildSaveCase(node, parent, preNode, nextNode) {
@@ -336,7 +340,7 @@ name: "TestCaseMinder",
         this.throwError(this.$t('test_track.case.minder_all_module_tip'));
       }
 
-      if (parent.isExtraNode) {
+      if (parent.isExtraNode && !isModuleNodeData(parent)) {
         this.throwError(this.$t('test_track.case.minder_tem_node_tip', [parent.text]));
       }
 

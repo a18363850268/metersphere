@@ -46,7 +46,7 @@
                     <el-row class="head-bar">
                       <el-col>
                         <el-divider content-position="left">
-                          <el-button class="test-case-name" type="text" @click="openTestTestCase(testCase)">{{ testCase.num }}-{{ testCase.name }}</el-button>
+                          <el-button class="test-case-name" type="text" @click="openTestTestCase(testCase)">{{ testCase.customNum }}-{{ testCase.name }}</el-button>
                         </el-divider>
                       </el-col>
                     </el-row>
@@ -311,6 +311,8 @@ export default {
       param.remark = this.testCase.remark;
       param.projectId = this.testCase.projectId;
       param.nodeId = this.testCase.nodeId;
+      param.demandId = this.testCase.demandId;
+      param.name = this.testCase.name;
       let option = this.getOption(param);
       for (let i = 0; i < this.testCase.steptResults.length; i++) {
         let result = {};
@@ -602,6 +604,7 @@ p {
 
 .test-case-name {
   padding: 0;
+  text-decoration: underline solid #783887;
 }
 
 /deep/ .el-drawer__body {

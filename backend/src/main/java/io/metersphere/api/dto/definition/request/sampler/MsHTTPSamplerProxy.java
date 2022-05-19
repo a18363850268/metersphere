@@ -4,6 +4,7 @@ import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
 import com.alibaba.fastjson.annotation.JSONField;
 import com.alibaba.fastjson.annotation.JSONType;
+import com.alibaba.fastjson.parser.Feature;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -134,7 +135,7 @@ public class MsHTTPSamplerProxy extends MsTestElement {
         // 非导出操作，且不是启用状态则跳过执行Ms
         if (!config.isOperating() && !this.isEnable()) {
             return;
-        }else if(config.isOperating() && StringUtils.isNotEmpty(config.getOperatingSampleTestName())){
+        } else if (config.isOperating() && StringUtils.isNotEmpty(config.getOperatingSampleTestName())) {
             this.setName(config.getOperatingSampleTestName());
         }
         if (this.getReferenced() != null && MsTestElementConstants.REF.name().equals(this.getReferenced())) {
@@ -187,7 +188,7 @@ public class MsHTTPSamplerProxy extends MsTestElement {
         setSamplerPath(config, httpConfig, sampler);
 
         // 请求体处理
-        if (this.body != null) {
+        if (this.body != null && !StringUtils.equalsAnyIgnoreCase(method, "GET")) {
             List<KeyValue> bodyParams = this.body.getBodyParams(sampler, this.getId());
             if (StringUtils.isNotEmpty(this.body.getType()) && "Form Data".equals(this.body.getType())) {
                 AtomicBoolean kvIsEmpty = new AtomicBoolean(true);
@@ -212,6 +213,27 @@ public class MsHTTPSamplerProxy extends MsTestElement {
             }
         }
 
+        if (config.isOperating() && config.isEffective(this.getProjectId()) && config.getConfig().get(this.getProjectId()).getCommonConfig() != null
+                && config.getConfig().get(this.getProjectId()).getCommonConfig().isEnableHost()) {
+            //导出的需要将DNSCache去掉，并把域名进行ip替换
+            Map<String, String> dnsMap = MsDNSCacheManager.getEnvironmentDns(config.getConfig().get(this.getProjectId()), httpConfig);
+            String domain = sampler.getDomain();
+            if (dnsMap.containsKey(domain)) {
+                String address = dnsMap.get(domain);
+                if (address.contains(":")) {
+                    String[] addressArr = StringUtils.split(address, ":");
+                    if (addressArr.length == 2) {
+                        try {
+                            sampler.setDomain(addressArr[0]);
+                            sampler.setPort(Integer.parseInt(addressArr[1]));
+                        } catch (Exception ignored) {
+                        }
+                    }
+                } else {
+                    sampler.setDomain(dnsMap.get(domain));
+                }
+            }
+        }
         final HashTree httpSamplerTree = tree.add(sampler);
 
         // 注意顺序，放在config前面，会优先于环境的请求头生效
@@ -235,7 +257,7 @@ public class MsHTTPSamplerProxy extends MsTestElement {
             httpSamplerTree.add(arguments);
         }
         //判断是否要开启DNS
-        if (config.isEffective(this.getProjectId()) && config.getConfig().get(this.getProjectId()).getCommonConfig() != null
+        if (!config.isOperating() && config.isEffective(this.getProjectId()) && config.getConfig().get(this.getProjectId()).getCommonConfig() != null
                 && config.getConfig().get(this.getProjectId()).getCommonConfig().isEnableHost()) {
             MsDNSCacheManager.addEnvironmentVariables(httpSamplerTree, this.getName(), config.getConfig().get(this.getProjectId()));
             MsDNSCacheManager.addEnvironmentDNS(httpSamplerTree, this.getName(), config.getConfig().get(this.getProjectId()), httpConfig);
@@ -275,7 +297,6 @@ public class MsHTTPSamplerProxy extends MsTestElement {
                 el.toHashTree(httpSamplerTree, el.getHashTree(), config);
             }
         }
-
         //根据配置增加全局前后至脚本
         if (httpConfig != null) {
             JMeterScriptUtil.setScriptByHttpConfig(httpConfig, httpSamplerTree, config, useEnvironment, this.getEnvironmentId(), true);
@@ -291,7 +312,7 @@ public class MsHTTPSamplerProxy extends MsTestElement {
                 ApiTestCaseWithBLOBs bloBs = CommonBeanFactory.getBean(ApiTestCaseService.class).get(this.getId());
                 if (bloBs != null) {
                     this.setProjectId(bloBs.getProjectId());
-                    JSONObject element = JSON.parseObject(bloBs.getRequest());
+                    JSONObject element = JSON.parseObject(bloBs.getRequest(), Feature.DisableSpecialKeyDetect);
                     ElementUtil.dataFormatting(element);
                     proxy = mapper.readValue(element.toJSONString(), new TypeReference<MsHTTPSamplerProxy>() {
                     });
@@ -369,7 +390,7 @@ public class MsHTTPSamplerProxy extends MsTestElement {
                 httpConfig.setGlobalScriptConfig(environmentConfig.getGlobalScriptConfig());
                 httpConfig.setAssertions(environmentConfig.getAssertions());
                 if (environmentConfig.isUseErrorCode()) {
-                    httpConfig.setErrorReportAssertions(HashTreeUtil.getErrorReportByProjectId(this.getProjectId()));
+                    httpConfig.setErrorReportAssertions(HashTreeUtil.getErrorReportByProjectId(this.getProjectId(), environmentConfig.isHigherThanSuccess(), environmentConfig.isHigherThanError()));
                 }
                 return httpConfig;
             }
@@ -390,11 +411,6 @@ public class MsHTTPSamplerProxy extends MsTestElement {
                     this.useEnvironment = config.getConfig().get(this.getProjectId()).getApiEnvironmentid();
                 }
                 String url = httpConfig.getProtocol() + "://" + httpConfig.getSocket();
-
-                // 补充如果是完整URL 则用自身URL
-                if (StringUtils.isNotEmpty(this.getUrl()) && ElementUtil.isURL(this.getUrl())) {
-                    url = this.getUrl();
-                }
                 if (isUrl()) {
                     if (this.isCustomizeReq() && StringUtils.isNotEmpty(this.getUrl())) {
                         url = this.getUrl();
@@ -457,7 +473,7 @@ public class MsHTTPSamplerProxy extends MsTestElement {
                 }
                 if (CollectionUtils.isNotEmpty(this.getArguments())) {
                     String path = postQueryParameters(envPath);
-                    if (HTTPConstants.DELETE.equals(this.getMethod()) && !path.startsWith("${")) {
+                    if (HTTPConstants.DELETE.equals(this.getMethod()) && !path.startsWith("${") && !path.startsWith("/${")) {
                         if (!path.startsWith("/")) {
                             path = "/" + path;
                         }
@@ -589,9 +605,6 @@ public class MsHTTPSamplerProxy extends MsTestElement {
             }
             return true;
         }
-        if (StringUtils.isNotEmpty(this.getUrl()) && ElementUtil.isURL(this.getUrl())) {
-            return true;
-        }
         return false;
     }
 
@@ -662,6 +675,10 @@ public class MsHTTPSamplerProxy extends MsTestElement {
                 try {
                     String value = keyValue.getValue().startsWith("@") ? ScriptEngineUtils.buildFunctionCallString(keyValue.getValue()) : keyValue.getValue();
                     value = keyValue.isUrlEncode() ? "${__urlencode(" + value + ")}" : value;
+
+                    if (StringUtils.isNotEmpty(value) && value.contains("\r")) {
+                        value = value.replaceAll("\r", "");
+                    }
                     stringBuffer.append("=").append(value);
                 } catch (Exception e) {
                     LogUtil.error(e);
@@ -677,28 +694,28 @@ public class MsHTTPSamplerProxy extends MsTestElement {
         list.stream().
                 filter(KeyValue::isValid).
                 filter(KeyValue::isEnable).forEach(keyValue -> {
-                    try {
-                        String value = StringUtils.isNotEmpty(keyValue.getValue()) && keyValue.getValue().startsWith("@") ? ScriptEngineUtils.buildFunctionCallString(keyValue.getValue()) : keyValue.getValue();
-                        HTTPArgument httpArgument = new HTTPArgument(keyValue.getName(), value);
-                        if (keyValue.getValue() == null) {
-                            httpArgument.setValue("");
-                        }
-                        httpArgument.setAlwaysEncoded(keyValue.isUrlEncode());
-                        if (StringUtils.isNotBlank(keyValue.getContentType())) {
-                            httpArgument.setContentType(keyValue.getContentType());
-                        }
-                        if (StringUtils.equalsIgnoreCase(this.method, "get")) {
-                            if (StringUtils.isNotEmpty(httpArgument.getValue())) {
-                                arguments.addArgument(httpArgument);
-                            }
-                        } else {
-                            arguments.addArgument(httpArgument);
-                        }
-                    } catch (Exception e) {
+                            try {
+                                String value = StringUtils.isNotEmpty(keyValue.getValue()) && keyValue.getValue().startsWith("@") ? ScriptEngineUtils.buildFunctionCallString(keyValue.getValue()) : keyValue.getValue();
+                                HTTPArgument httpArgument = new HTTPArgument(keyValue.getName(), value);
+                                if (keyValue.getValue() == null) {
+                                    httpArgument.setValue("");
+                                }
+                                httpArgument.setAlwaysEncoded(keyValue.isUrlEncode());
+                                if (StringUtils.isNotBlank(keyValue.getContentType())) {
+                                    httpArgument.setContentType(keyValue.getContentType());
+                                }
+                                if (StringUtils.equalsIgnoreCase(this.method, "get")) {
+                                    if (StringUtils.isNotEmpty(httpArgument.getValue())) {
+                                        arguments.addArgument(httpArgument);
+                                    }
+                                } else {
+                                    arguments.addArgument(httpArgument);
+                                }
+                            } catch (Exception e) {
 
-                    }
-                }
-        );
+                            }
+                        }
+                );
         return arguments;
     }
 

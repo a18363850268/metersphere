@@ -65,7 +65,7 @@ public class ResourcePoolCalculation {
                     continue;
                 }
                 TestResourceDTO dto = new TestResourceDTO();
-                BeanUtils.copyBean(dto,testResource);
+                BeanUtils.copyBean(dto, testResource);
                 nodeJvm.setTestResource(dto);
                 availableNodes.add(nodeJvm);
             }

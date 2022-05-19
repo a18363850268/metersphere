@@ -44,7 +44,7 @@
 
     <el-menu-item index="/setting" onselectstart="return false"
                   v-permission="['SYSTEM_USER:READ', 'SYSTEM_WORKSPACE:READ', 'SYSTEM_GROUP:READ', 'SYSTEM_TEST_POOL:READ', 'SYSTEM_SETTING:READ', 'SYSTEM_AUTH:READ', 'SYSTEM_QUOTA:READ','SYSTEM_OPERATING_LOG:READ',
-                  'WORKSPACE_SERVICE:READ', 'PROJECT_MESSAGE:READ', 'WORKSPACE_USER:READ', 'WORKSPACE_PROJECT_MANAGER:READ', 'WORKSPACE_PROJECT_ENVIRONMENT:READ', 'WORKSPACE_OPERATING_LOG:READ']">
+                  'WORKSPACE_SERVICE:READ', 'WORKSPACE_USER:READ', 'WORKSPACE_PROJECT_MANAGER:READ', 'WORKSPACE_PROJECT_ENVIRONMENT:READ', 'WORKSPACE_OPERATING_LOG:READ']">
       {{ $t('commons.system_setting') }}
     </el-menu-item>
   </el-menu>
@@ -92,7 +92,7 @@ export default {
       this.activeIndex = this.$route.matched[0].path;
     }
 
-    axios.get('/license/valid').then(response => {
+    axios.get('/license/validate').then(response => {
       validateAndSetLicense(response.data.data); // 在调用 listModules 之前删除校验失败的 license, axios 失败不弹框
       if (!hasLicense()) {
         this.isReport = false;
@@ -150,6 +150,10 @@ export default {
 .el-menu >>> .el-menu-item {
   box-sizing: border-box;
   height: 40px;
+}
+
+.el-menu-item {
+  padding: 0 10px;
 }
 
 </style>

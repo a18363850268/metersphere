@@ -32,6 +32,7 @@ const state = {
   scenarioEnvMap: new Map(),
   apiMap: new Map(),
   apiStatus: new Map(),
+  apiCaseMap: new Map(),
   testCaseMap: new Map(),
   curTabId: null,
   testCaseDefaultValue: {},
@@ -41,9 +42,12 @@ const state = {
   selectCommand: {},
   //按照type分组的指令
   groupedCmd: {},
+  selectUiGroup: '',
   librarySelectElement: {},
   uiElementLibraryModuleIds: null,
+  uiElementLibraryElements: null,
   refreshUiScenario: false,
+  showLicenseCountWarning: false
 }
 
 const store = new Vuex.Store({

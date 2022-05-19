@@ -3,9 +3,11 @@
     <el-card class="table-card-nopadding" v-loading="result.loading">
       <slot name="version"></slot>
 
-      <ms-table-search-bar :condition.sync="condition" @change="search" class="search-input"
-                           :tip="$t('commons.search_by_id_name_tag')"/>
-      <ms-table-adv-search-bar :condition.sync="condition" @search="search" class="adv-search-bar"/>
+      <ms-search
+        :condition.sync="condition"
+        :base-search-tip="$t('commons.search_by_id_name_tag')"
+        @search="search">
+      </ms-search>
 
       <ms-table
         :data="tableData"
@@ -99,7 +101,7 @@
                            sortable
                            :field="item"
                            :fields-width="fieldsWidth"
-                           :filters="apiscenariofilters.STATUS_FILTERS"
+                           :filters="!trashEnable ? apiscenariofilters.STATUS_FILTERS : apiscenariofilters.TRASH_FILTERS"
                            min-width="120px">
             <template v-slot:default="scope">
               <plan-status-table-item :value="scope.row.status"/>
@@ -115,7 +117,7 @@
             <template v-slot:default="scope">
               <ms-tag v-for="(itemName,index)  in scope.row.tags" :key="index" type="success" effect="plain"
                       :content="itemName" :show-tooltip="scope.row.tags.length===1&&itemName.length*12<=120"
-                      tooltip style="margin-left: 0px; margin-right: 2px"/>
+                      :showTooltip="true" style="margin-left: 0px; margin-right: 2px"/>
               <span/>
             </template>
           </ms-table-column>
@@ -252,7 +254,8 @@
 
         <template v-slot:opt-behind="scope">
           <ms-scenario-extend-buttons v-if="!trashEnable" style="display: contents" @openScenario="openScenario"
-                                      :row="scope.row"/>
+                                      :request="runRequest"
+                                      :row="scope.row" @openSchedule="openSchedule(scope.row)"/>
         </template>
 
       </ms-table>
@@ -307,7 +310,7 @@
 </template>
 
 <script>
-import {downloadFile, getCurrentProjectID, getUUID, hasLicense, objToStrMap, strMapToObj} from "@/common/js/utils";
+import {downloadFile, getCurrentProjectID, getUUID, hasLicense, hasPermission, objToStrMap, strMapToObj} from "@/common/js/utils";
 import {API_SCENARIO_CONFIGS} from "@/business/components/common/components/search/search-components";
 import {API_SCENARIO_LIST} from "../../../../../common/js/constants";
 
@@ -329,6 +332,7 @@ import MsTableSearchBar from "@/business/components/common/components/MsTableSea
 import MsTableAdvSearchBar from "@/business/components/common/components/search/MsTableAdvSearchBar";
 import ListItemDeleteConfirm from "@/business/components/common/components/ListItemDeleteConfirm";
 import {Message} from "element-ui";
+import MsSearch from "@/business/components/common/components/search/MsSearch";
 
 const requireComponent = require.context('@/business/components/xpack/', true, /\.vue$/);
 const relationshipGraphDrawer = requireComponent.keys().length > 0 ? requireComponent("./graph/RelationshipGraphDrawer.vue") : {};
@@ -342,6 +346,7 @@ export default {
     MsTable,
     MsTableColumn,
     HeaderLabelOperate,
+    MsSearch,
     "relationshipGraphDrawer": relationshipGraphDrawer.default,
     HeaderCustom: () => import("@/business/components/common/head/HeaderCustom"),
     BatchMove: () => import("../../../track/case/components/BatchMove"),
@@ -535,7 +540,10 @@ export default {
         {
           name: this.$t('api_test.create_performance_test_batch'),
           handleClick: this.batchCreatePerformance,
-          permissions: ['PROJECT_API_SCENARIO:READ+CREATE_PERFORMANCE_BATCH']
+          permissions: ['PROJECT_API_SCENARIO:READ+CREATE_PERFORMANCE_BATCH'],
+          isDisable() {
+            return !hasPermission('PROJECT_PERFORMANCE_TEST:READ+CREATE')
+          }
         },
       ],
       typeArr: [
@@ -916,6 +924,14 @@ export default {
       this.$refs.runMode.open();
 
     },
+    openSchedule(row) {
+      let run = {};
+      run.id = getUUID();
+      run.ids = [row.id];
+      run.projectId = this.projectId;
+      run.condition = this.condition;
+      this.runRequest = run;
+    },
     orderBySelectRows() {
       let selectIds = this.$refs.scenarioTable.selectIds;
       let array = [];
@@ -1144,14 +1160,14 @@ export default {
         param.ids = [row.id];
         this.$post('/api/automation/checkBeforeDelete/', param, response => {
           let checkResult = response.data;
-          let alertMsg = this.$t('load_test.delete_threadgroup_confirm') + " [" + row.name + "] ?";
+          let alertMsg = this.$t('load_test.delete_threadgroup_confirm') + " " + row.name + " ?";
           if (!checkResult.deleteFlag) {
             alertMsg = "";
             checkResult.checkMsg.forEach(item => {
               alertMsg += item;
             });
             if (alertMsg === "") {
-              alertMsg = this.$t('load_test.delete_threadgroup_confirm') + " [" + row.name + "] ?";
+              alertMsg = this.$t('load_test.delete_threadgroup_confirm') + " " + row.name + " ?";
             } else {
               alertMsg += this.$t('api_test.is_continue');
             }

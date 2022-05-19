@@ -13,6 +13,8 @@ import io.metersphere.api.dto.scenario.request.RequestType;
 import io.metersphere.base.domain.ApiDefinitionWithBLOBs;
 import io.metersphere.base.domain.ApiModule;
 import io.metersphere.commons.constants.SwaggerParameterType;
+import io.metersphere.commons.exception.MSException;
+import io.metersphere.utils.LoggerUtil;
 import io.swagger.models.*;
 import io.swagger.models.auth.AuthorizationValue;
 import io.swagger.models.parameters.*;
@@ -32,11 +34,18 @@ public class Swagger2Parser extends SwaggerAbstractParser {
 
     @Override
     public ApiDefinitionImport parse(InputStream source, ApiTestImportRequest request) {
-        Swagger swagger;
+        Swagger swagger = null;
         String sourceStr = "";
         List<AuthorizationValue> auths = setAuths(request);
-        if (StringUtils.isNotBlank(request.getSwaggerUrl())) {  //  使用 url 导入 swagger
-            swagger = new SwaggerParser().read(request.getSwaggerUrl(), auths, true);
+        if (StringUtils.isNotBlank(request.getSwaggerUrl())) {
+            try {
+                //  使用 url 导入 swagger
+                swagger = new SwaggerParser().read(request.getSwaggerUrl(), auths, true);
+            }catch (Exception e){
+                LoggerUtil.error(e);
+                MSException.throwException("swagger验证失败");
+            }
+
         } else {
             sourceStr = getApiTestStr(source);  //  导入的二进制文件转换为 String
             swagger = new SwaggerParser().readWithInfo(sourceStr).getSwagger();
@@ -256,7 +265,11 @@ public class Swagger2Parser extends SwaggerAbstractParser {
         msResponse.setStatusCode(new ArrayList<>());
         if (responses != null && responses.size() > 0) {
             responses.forEach((responseCode, response) -> {
-                msResponse.getStatusCode().add(new KeyValue(responseCode, responseCode));
+                if(StringUtils.isNotBlank(response.getDescription())){
+                    msResponse.getStatusCode().add(new KeyValue(responseCode, response.getDescription()));
+                }else{
+                    msResponse.getStatusCode().add(new KeyValue(responseCode, responseCode));
+                }
                 if (responseCode.equals("200")&&response.getResponseSchema()!=null) {
                     parseResponseBody(response.getResponseSchema(),msResponse.getBody());
                     msResponse.getBody().setFormat("JSON-SCHEMA");
@@ -284,12 +297,15 @@ public class Swagger2Parser extends SwaggerAbstractParser {
             ArrayModel arrayModel = (ArrayModel) schema;
             item.setType("array");
             item.setItems(new ArrayList<>());
-            JsonSchemaItem arrayItem = parseJsonSchema((Model) arrayModel.getItems(), refSet);
-            if (arrayItem != null) item.getItems().add(arrayItem);
+            JsonSchemaItem proItem = parseProperty(arrayModel.getItems(), refSet);
+            if (proItem != null) item.getItems().add(proItem);
         } else if (schema instanceof ModelImpl) {
             item.setType("object");
             ModelImpl model = (ModelImpl) schema;
             item.setProperties(parseNewSchemaProperties(model, refSet));
+            if(model.getAdditionalProperties()!=null){
+                item.setAdditionalProperties(parseProperty(model.getAdditionalProperties(), refSet));
+            }
         } else if (schema instanceof AbstractModel) {
             AbstractModel abstractModel = (AbstractModel) schema;
             item.setType("object");
@@ -391,6 +407,9 @@ public class Swagger2Parser extends SwaggerAbstractParser {
                 if(model.getRequired()!=null){
                     item.setRequired(model.getRequired());
                 }
+                if(model.getAdditionalProperties()!=null){
+                    item.setAdditionalProperties(parseProperty(model.getAdditionalProperties(), new HashSet<>()));
+                }
             }
         }else if(schema instanceof AbstractModel){
             AbstractModel abstractModel = (AbstractModel) schema;
@@ -474,7 +493,7 @@ public class Swagger2Parser extends SwaggerAbstractParser {
     private void handleBaseProperties(JsonSchemaItem item, Property value) {
         if (value instanceof StringProperty || value instanceof DateProperty || value instanceof DateTimeProperty ) {
             item.setType("string");
-        } else if (value instanceof IntegerProperty) {
+        } else if (value instanceof IntegerProperty || value instanceof BaseIntegerProperty) {
             item.setType("integer");
         } else if (value instanceof BooleanProperty) {
             item.setType("boolean");

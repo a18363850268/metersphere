@@ -42,7 +42,8 @@
 
         <slot name="button" v-if="showVersion"></slot>
 
-        <el-button v-if="showVersion" size="mini" icon="el-icon-copy-document" circle @click="copyRow" style="padding: 5px"
+        <el-button v-if="showVersion && showCopy" size="mini" icon="el-icon-copy-document" circle @click="copyRow"
+                   style="padding: 5px"
                    :disabled="(data.disabled && !data.root) || !showVersion "/>
 
         <el-button v-show="isSingleButton" size="mini" icon="el-icon-delete" type="danger" style="padding: 5px" circle @click="remove"
@@ -52,6 +53,7 @@
                           :environmentType="environmentType"
                           :environmentGroupId="environmentGroupId"
                           :envMap="envMap"
+                          :is-scenario="true"
                           @enable="enable"
                           @copy="copyRow"
                           @remove="remove"
@@ -186,13 +188,13 @@ export default {
   },
   computed: {
     isSingleButton() {
-      if (this.data.type === 'ConstantTimer') {
+      if (this.data.type === 'ConstantTimer' || this.data.type === 'Assertions') {
         return (this.innerStep && this.showVersion && this.stepFilter.get('ALlSamplerStep').indexOf(this.data.type) !== -1)
       }
       return (this.showVersion && this.stepFilter.get('ALlSamplerStep').indexOf(this.data.type) !== -1);
     },
     isMoreButton() {
-      if (this.data.type === 'ConstantTimer') {
+      if (this.data.type === 'ConstantTimer' || this.data.type === 'Assertions') {
         return (!this.innerStep || this.showBtn && (!this.data.disabled || this.data.root) && this.showVersion && this.stepFilter.get('ALlSamplerStep').indexOf(this.data.type) === -1);
       }
       return (this.showBtn && (!this.data.disabled || this.data.root) && this.showVersion && this.stepFilter.get('ALlSamplerStep').indexOf(this.data.type) === -1);

@@ -1,11 +1,10 @@
 <template>
   <div>
 
-      <el-input :placeholder="$t('commons.search_by_name_or_id')" @blur="initTable"
-                @keyup.enter.native="initTable" class="search-input" size="small" v-model="condition.name"/>
-      <ms-table-adv-search-bar :condition.sync="condition" class="adv-search-bar"
-                               v-if="condition.components !== undefined && condition.components.length > 0"
-                               @search="initTable"/>
+    <ms-search
+      :condition.sync="condition"
+      @search="initTable">
+    </ms-search>
 
       <version-select v-xpack :project-id="projectId" @changeVersion="changeVersion" margin-right="20"
                     class="search-input"/>
@@ -14,6 +13,7 @@
                 :total="total"
                 :showSelectAll="false"
                 :screenHeight="screenHeight"
+                @selectCountChange="selectCountChange"
                 @refresh="initTable"
                 ref="table">
 
@@ -67,8 +67,6 @@
       <ms-table-pagination :change="initTable" :current-page.sync="currentPage" :page-size.sync="pageSize"
                            :total="total"/>
 
-    <table-select-count-bar :count="selectRows.size"/>
-
   </div>
 
 </template>
@@ -78,23 +76,23 @@
 import MsTable from "@/business/components/common/components/table/MsTable";
 import MsTableColumn from "@/business/components/common/components/table/MsTableColumn";
 import MsTablePagination from "@/business/components/common/pagination/TablePagination";
-import TableSelectCountBar from "@/business/components/api/automation/scenario/api/TableSelectCountBar";
 import MsPerformanceTestStatus from "@/business/components/performance/test/PerformanceTestStatus";
 import MsTableAdvSearchBar from "@/business/components/common/components/search/MsTableAdvSearchBar";
 import {TEST_CASE_RELEVANCE_LOAD_CASE} from "@/business/components/common/components/search/search-components";
 const requireComponent = require.context('@/business/components/xpack/', true, /\.vue$/);
 const VersionSelect = requireComponent.keys().length > 0 ? requireComponent("./version/VersionSelect.vue") : {};
 import {hasLicense, getCurrentProjectID} from "@/common/js/utils";
+import MsSearch from "@/business/components/common/components/search/MsSearch";
 
 export default {
   name: "TestCaseRelateLoadList",
   components: {
     MsPerformanceTestStatus,
-    TableSelectCountBar,
     MsTablePagination,
     MsTable,
     MsTableColumn,
     MsTableAdvSearchBar,
+    MsSearch,
     'VersionSelect': VersionSelect.default,
   },
   data() {
@@ -138,6 +136,9 @@ export default {
     }
   },
   methods: {
+    selectCountChange(data) {
+      this.$emit("selectCountChange", data);
+    },
     initTable(projectId) {
       this.condition.status = "";
       if (projectId != null && typeof projectId === 'string') {

@@ -241,6 +241,18 @@
       "resourceId": "WORKSPACE_PROJECT_ENVIRONMENT"
     },
     {
+      "id": "WORKSPACE_QUOTA:READ",
+      "name": "permission.workspace_quota.read",
+      "resourceId": "WORKSPACE_QUOTA",
+      "license": true
+    },
+    {
+      "id": "WORKSPACE_QUOTA:READ+EDIT",
+      "name": "permission.workspace_quota.edit",
+      "resourceId": "WORKSPACE_QUOTA",
+      "license": true
+    },
+    {
       "id": "WORKSPACE_OPERATING_LOG:READ",
       "name": "permission.workspace_operation_log.read",
       "resourceId": "WORKSPACE_OPERATING_LOG"
@@ -761,6 +773,36 @@
       "resourceId": "PROJECT_API_REPORT"
     },
     {
+      "id": "PROJECT_UI_ELEMENT:READ",
+      "name": "permission.project_ui_element.read",
+      "resourceId": "PROJECT_UI_ELEMENT",
+      "license": true
+    },
+    {
+      "id": "PROJECT_UI_ELEMENT:READ+CREATE",
+      "name": "permission.project_ui_element.create",
+      "resourceId": "PROJECT_UI_ELEMENT",
+      "license": true
+    },
+    {
+      "id": "PROJECT_UI_ELEMENT:READ+EDIT",
+      "name": "permission.project_ui_element.edit",
+      "resourceId": "PROJECT_UI_ELEMENT",
+      "license": true
+    },
+    {
+      "id": "PROJECT_UI_ELEMENT:READ+DELETE",
+      "name": "permission.project_ui_element.delete",
+      "resourceId": "PROJECT_UI_ELEMENT",
+      "license": true
+    },
+    {
+      "id": "PROJECT_UI_ELEMENT:READ+COPY",
+      "name": "permission.project_ui_element.copy",
+      "resourceId": "PROJECT_UI_ELEMENT",
+      "license": true
+    },
+    {
       "id": "PROJECT_UI_SCENARIO:READ",
       "name": "permission.project_ui_scenario.read",
       "resourceId": "PROJECT_UI_SCENARIO",
@@ -803,12 +845,6 @@
       "license": true
     },
     {
-      "id": "PROJECT_UI_SCENARIO:READ+SCHEDULE",
-      "name": "permission.project_ui_scenario.schedule",
-      "resourceId": "PROJECT_UI_SCENARIO",
-      "license": true
-    },
-    {
       "id": "PROJECT_UI_SCENARIO:READ+IMPORT_SCENARIO",
       "name": "permission.project_ui_scenario.import",
       "resourceId": "PROJECT_UI_SCENARIO",
@@ -827,21 +863,21 @@
       "license": true
     },
     {
-      "id": "PROJECT_UI_SCENARIO:READ+CREATE_PERFORMANCE",
-      "name": "permission.project_ui_scenario.create_performance",
-      "resourceId": "PROJECT_UI_SCENARIO",
-      "license": true
-    },
-    {
-      "id": "PROJECT_UI_SCENARIO:READ+CREATE_PERFORMANCE_BATCH",
-      "name": "permission.project_ui_scenario.create_performance_batch",
-      "resourceId": "PROJECT_UI_SCENARIO",
-      "license": true
-    },
-    {
       "id": "PROJECT_UI_SCENARIO:READ+BATCH_COPY",
       "name": "permission.project_ui_scenario.batch_copy",
       "resourceId": "PROJECT_UI_SCENARIO",
+      "license": true
+    },
+    {
+      "id": "PROJECT_UI_REPORT:READ",
+      "name": "permission.project_ui_report.read",
+      "resourceId": "PROJECT_UI_REPORT",
+      "license": true
+    },
+    {
+      "id": "PROJECT_UI_REPORT:READ+DELETE",
+      "name": "permission.project_ui_report.delete",
+      "resourceId": "PROJECT_UI_REPORT",
       "license": true
     },
     {
@@ -1047,6 +1083,12 @@
       "id": "PERSONAL_INFORMATION:READ+THIRD_ACCOUNT",
       "name": "permission.personal_information.third_account",
       "resourceId": "PERSONAL_INFORMATION"
+    },
+    {
+      "id": "PERSONAL_INFORMATION:READ+UI_SETTING",
+      "name": "permission.personal_information.ui_setting",
+      "resourceId": "PERSONAL_INFORMATION",
+      "license": true
     }
   ],
   "resource": [
@@ -1097,6 +1139,11 @@
     {
       "id": "WORKSPACE_PROJECT_ENVIRONMENT",
       "name": "permission.workspace_project_environment.name"
+    },
+    {
+      "id": "WORKSPACE_QUOTA",
+      "name": "permission.workspace_quota.name",
+      "license": true
     },
     {
       "id": "WORKSPACE_OPERATING_LOG",
@@ -1185,8 +1232,18 @@
       "name": "permission.project_api_report.name"
     },
     {
+      "id": "PROJECT_UI_ELEMENT",
+      "name": "permission.project_ui_element.name",
+      "license": true
+    },
+    {
       "id": "PROJECT_UI_SCENARIO",
       "name": "permission.project_ui_scenario.name",
+      "license": true
+    },
+    {
+      "id": "PROJECT_UI_REPORT",
+      "name": "permission.project_ui_report.name",
       "license": true
     },
     {

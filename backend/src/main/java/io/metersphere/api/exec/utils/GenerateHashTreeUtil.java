@@ -2,6 +2,7 @@ package io.metersphere.api.exec.utils;
 
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
+import com.alibaba.fastjson.parser.Feature;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.DeserializationFeature;
@@ -20,14 +21,11 @@ import io.metersphere.commons.utils.BeanUtils;
 import io.metersphere.commons.utils.CommonBeanFactory;
 import io.metersphere.commons.utils.LogUtil;
 import io.metersphere.constants.RunModeConstants;
-import io.metersphere.dto.JmeterRunRequestDTO;
-import io.metersphere.dto.JvmInfoDTO;
-import io.metersphere.dto.ResultDTO;
-import io.metersphere.dto.RunModeConfigDTO;
+import io.metersphere.dto.*;
 import io.metersphere.plugin.core.MsTestElement;
 import io.metersphere.service.EnvironmentGroupProjectService;
+import io.metersphere.utils.LoggerUtil;
 import io.metersphere.vo.BooleanPool;
-import io.metersphere.xpack.ui.hashtree.MsUiScenario;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.jorphan.collections.HashTree;
 
@@ -39,7 +37,7 @@ public class GenerateHashTreeUtil {
 
     public static MsScenario parseScenarioDefinition(String scenarioDefinition) {
         if (StringUtils.isNotEmpty(scenarioDefinition)) {
-            MsScenario scenario = JSONObject.parseObject(scenarioDefinition, MsScenario.class);
+            MsScenario scenario = JSONObject.parseObject(scenarioDefinition, MsScenario.class, Feature.DisableSpecialKeyDetect);
             if (scenario != null) {
                 parse(scenarioDefinition, scenario);
             }
@@ -52,37 +50,7 @@ public class GenerateHashTreeUtil {
         ObjectMapper mapper = new ObjectMapper();
         mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
         try {
-            JSONObject element = JSON.parseObject(scenarioDefinition);
-            ElementUtil.dataFormatting(element);
-            // 多态JSON普通转换会丢失内容，需要通过 ObjectMapper 获取
-            if (element != null && StringUtils.isNotEmpty(element.getString("hashTree"))) {
-                LinkedList<MsTestElement> elements = mapper.readValue(element.getString("hashTree"),
-                        new TypeReference<LinkedList<MsTestElement>>() {
-                        });
-                scenario.setHashTree(elements);
-            }
-            if (element != null && StringUtils.isNotEmpty(element.getString("variables"))) {
-                LinkedList<ScenarioVariable> variables = mapper.readValue(element.getString("variables"),
-                        new TypeReference<LinkedList<ScenarioVariable>>() {
-                        });
-                scenario.setVariables(variables);
-            }
-        } catch (Exception e) {
-            LogUtil.error(e);
-        }
-    }
-
-    public static MsUiScenario parseUiScenario(String scenarioDefinition) {
-        MsUiScenario msUiScenario = JSONObject.parseObject(scenarioDefinition, MsUiScenario.class);
-        parseUiScenario(scenarioDefinition, msUiScenario);
-        return msUiScenario;
-    }
-
-    public static void parseUiScenario(String scenarioDefinition, MsUiScenario scenario) {
-        ObjectMapper mapper = new ObjectMapper();
-        mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
-        try {
-            JSONObject element = JSON.parseObject(scenarioDefinition);
+            JSONObject element = JSON.parseObject(scenarioDefinition, Feature.DisableSpecialKeyDetect);
             ElementUtil.dataFormatting(element);
             // 多态JSON普通转换会丢失内容，需要通过 ObjectMapper 获取
             if (element != null && StringUtils.isNotEmpty(element.getString("hashTree"))) {
@@ -105,7 +73,7 @@ public class GenerateHashTreeUtil {
     public static LinkedList<MsTestElement> getScenarioHashTree(String definition) {
         ObjectMapper objectMapper = new ObjectMapper();
         objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
-        JSONObject element = JSON.parseObject(definition);
+        JSONObject element = JSON.parseObject(definition, Feature.DisableSpecialKeyDetect);
         try {
             if (element != null) {
                 ElementUtil.dataFormatting(element);
@@ -159,7 +127,7 @@ public class GenerateHashTreeUtil {
             MsThreadGroup group = new MsThreadGroup();
             group.setLabel(item.getName());
             group.setName(runRequest.getReportId());
-            MsScenario scenario = JSONObject.parseObject(item.getScenarioDefinition(), MsScenario.class);
+            MsScenario scenario = JSONObject.parseObject(item.getScenarioDefinition(), MsScenario.class, Feature.DisableSpecialKeyDetect);
             group.setOnSampleError(scenario.getOnSampleError());
             if (planEnvMap != null && planEnvMap.size() > 0) {
                 scenario.setEnvironmentMap(planEnvMap);
@@ -174,12 +142,15 @@ public class GenerateHashTreeUtil {
 
             group.setHashTree(scenarios);
             testPlan.getHashTree().add(group);
+
+            LoggerUtil.info("报告ID" + runRequest.getReportId() + " 场景资源：" + item.getName() + ", 生成执行脚本JMX成功");
         } catch (Exception ex) {
             RemakeReportService remakeReportService = CommonBeanFactory.getBean(RemakeReportService.class);
             remakeReportService.remake(runRequest);
             ResultDTO dto = new ResultDTO();
             BeanUtils.copyBean(dto, runRequest);
             CommonBeanFactory.getBean(ApiExecutionQueueService.class).queueNext(dto);
+            LoggerUtil.error("报告ID" + runRequest.getReportId() + " 场景资源：" + item.getName() + ", 生成执行脚本失败", ex);
         }
         ParameterConfig config = new ParameterConfig();
         config.setScenarioId(item.getId());
@@ -190,5 +161,21 @@ public class GenerateHashTreeUtil {
 
     public static boolean isSetReport(RunModeConfigDTO config) {
         return config != null && StringUtils.equals(config.getReportType(), RunModeConstants.SET_REPORT.toString()) && StringUtils.isNotEmpty(config.getReportName());
+    }
+
+    public static String getPlatformUrl(BaseSystemConfigDTO baseInfo, JmeterRunRequestDTO request, String queueDetailId) {
+        // 占位符
+        String platformUrl = "http://localhost:8081";
+        if (baseInfo != null) {
+            platformUrl = baseInfo.getUrl();
+        }
+
+        platformUrl += "/api/jmeter/download?testId="
+                + request.getTestId()
+                + "&reportId=" + request.getReportId()
+                + "&runMode=" + request.getRunMode()
+                + "&reportType=" + request.getReportType()
+                + "&queueId=" + queueDetailId;
+        return platformUrl;
     }
 }

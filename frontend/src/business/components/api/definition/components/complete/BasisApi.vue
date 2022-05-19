@@ -30,7 +30,7 @@
               <el-option
                 v-for="item in maintainerOptions"
                 :key="item.id"
-                :label="item.name + ' (' + item.id + ')'"
+                :label="item.name + ' (' + item.email + ')'"
                 :value="item.id">
               </el-option>
             </el-select>
@@ -60,7 +60,7 @@
   import {API_STATUS} from "../../model/JsonData";
   import MsInputTag from "@/business/components/api/automation/scenario/MsInputTag";
   import MsSelectTree from "../../../../common/select-tree/SelectTree";
-  import {getCurrentProjectID} from "@/common/js/utils";
+  import {getProjectMemberOption} from "@/network/user";
 
   export default {
     name: "MsBasisApi",
@@ -108,7 +108,15 @@
       },
       'basicForm.description': {
         handler(v, v1) {
-          if (v && v1 && v !== v1) {
+          if (v && v1 !== undefined && v !== v1) {
+            this.apiMapStatus();
+          }
+        }
+      },
+      'basicForm.tags': {
+        handler(v, v1) {
+          this.tagCount++;
+          if (v && v1 && JSON.stringify(v) !== JSON.stringify(v1) && this.tagCount > 1) {
             this.apiMapStatus();
           }
         }
@@ -120,6 +128,7 @@
       this.$get('/api/definition/follow/' + this.basisData.id, response => {
         this.basicForm.follows = response.data;
       });
+
     },
     data() {
       return {
@@ -143,6 +152,7 @@
         },
         value: API_STATUS[0].id,
         options: API_STATUS,
+        tagCount: 0
       }
     },
     methods: {
@@ -153,14 +163,16 @@
         }
       },
       getMaintainerOptions() {
-        this.$post('/user/project/member/tester/list', {projectId: getCurrentProjectID()}, response => {
-          this.maintainerOptions = response.data;
+        getProjectMemberOption(data => {
+          this.maintainerOptions = data;
         });
       },
       reload() {
         this.loading = true
         this.$nextTick(() => {
-          this.loading = false
+          this.loading = false;
+          this.$store.state.apiStatus.set("fromChange", false);
+          this.$store.state.apiMap.set(this.basicForm.id, this.$store.state.apiStatus);
         })
       },
       setModule(id,data) {
@@ -173,6 +185,7 @@
             this.$emit('callback');
           }
         })
+        this.tagCount = 0;
       },
       createModules() {
         this.$emit("createRootModelInTree");

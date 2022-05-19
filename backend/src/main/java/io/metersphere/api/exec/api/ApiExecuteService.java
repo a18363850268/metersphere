@@ -2,8 +2,8 @@ package io.metersphere.api.exec.api;
 
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
+import com.alibaba.fastjson.parser.Feature;
 import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.metersphere.api.dto.definition.RunCaseRequest;
 import io.metersphere.api.dto.definition.RunDefinitionRequest;
@@ -28,6 +28,7 @@ import io.metersphere.commons.constants.ApiRunMode;
 import io.metersphere.commons.utils.CommonBeanFactory;
 import io.metersphere.commons.utils.FileUtils;
 import io.metersphere.commons.utils.LogUtil;
+import io.metersphere.commons.utils.SessionUtils;
 import io.metersphere.dto.JmeterRunRequestDTO;
 import io.metersphere.dto.MsExecResponseDTO;
 import io.metersphere.plugin.core.MsTestElement;
@@ -60,6 +61,8 @@ public class ApiExecuteService {
     private TcpApiParamService tcpApiParamService;
     @Resource
     private ExtApiTestCaseMapper extApiTestCaseMapper;
+    @Resource
+    private ObjectMapper mapper;
 
     public MsExecResponseDTO jenkinsRun(RunCaseRequest request) {
         ApiTestCaseWithBLOBs caseWithBLOBs = null;
@@ -79,7 +82,7 @@ public class ApiExecuteService {
             request.setEnvironmentId(extApiTestCaseMapper.getApiCaseEnvironment(request.getCaseId()));
         }
         //提前生成报告
-        ApiDefinitionExecResult report = ApiDefinitionExecResultUtil.add(caseWithBLOBs.getId(), APITestStatus.Running.name(), request.getReportId());
+        ApiDefinitionExecResult report = ApiDefinitionExecResultUtil.add(caseWithBLOBs.getId(), APITestStatus.Running.name(), request.getReportId(),Objects.requireNonNull(SessionUtils.getUser()).getId());
         report.setName(caseWithBLOBs.getName());
         report.setTriggerMode(ApiRunMode.JENKINS.name());
         report.setType(ApiRunMode.JENKINS.name());
@@ -182,8 +185,11 @@ public class ApiExecuteService {
 
         JmeterRunRequestDTO runRequest = new JmeterRunRequestDTO(testId, request.getId(), runMode, hashTree);
         runRequest.setDebug(request.isDebug());
+
         runRequest.setExtendedParameters(new HashMap<String, Object>() {{
             this.put("SYN_RES", request.isSyncResult());
+            this.put("userId", SessionUtils.getUser().getId());
+            this.put("userName", SessionUtils.getUser().getName());
         }});
         // 开始执行
         jMeterService.run(runRequest);
@@ -191,9 +197,7 @@ public class ApiExecuteService {
     }
 
     public HashTree generateHashTree(RunCaseRequest request, ApiTestCaseWithBLOBs testCaseWithBLOBs) throws Exception {
-        ObjectMapper mapper = new ObjectMapper();
-        mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
-        JSONObject elementObj = JSON.parseObject(testCaseWithBLOBs.getRequest());
+        JSONObject elementObj = JSON.parseObject(testCaseWithBLOBs.getRequest(), Feature.DisableSpecialKeyDetect);
         ElementUtil.dataFormatting(elementObj);
 
         MsTestElement element = mapper.readValue(elementObj.toJSONString(), new TypeReference<MsTestElement>() {

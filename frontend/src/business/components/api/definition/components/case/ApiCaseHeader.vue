@@ -20,7 +20,7 @@
             :project-id="projectId"
             :is-read-only="isReadOnly"
             :useEnvironment='useEnvironment'
-            @setEnvironment="setEnvironment" ref="environmentSelect"/>
+            @setEnvironment="setEnvironment" ref="environmentSelect" v-if="api.protocol==='HTTP' || api.protocol ==='TCP'"/>
         </el-col>
         <el-col :span="2">
           <!-- 保存操作 -->
@@ -43,6 +43,7 @@ import MsTag from "../../../../common/components/MsTag";
 import MsEnvironmentSelect from "./MsEnvironmentSelect";
 import {API_METHOD_COLOUR} from "../../model/JsonData";
 import ApiCaseItem from "@/business/components/api/definition/components/case/ApiCaseItem";
+import {hasPermission} from "@/common/js/utils";
 
 export default {
   name: "ApiCaseHeader",
@@ -87,11 +88,13 @@ export default {
   },
   methods: {
     keyDown(e) {
-      if (!(e.keyCode === 83 && (e.ctrlKey || e.metaKey))) {
-        return;
+      if (hasPermission('PROJECT_API_DEFINITION:READ+EDIT_CASE')) {
+        if (!(e.keyCode === 83 && (e.ctrlKey || e.metaKey))) {
+          return;
+        }
+        e.preventDefault();
+        this.saveTestCase();
       }
-      e.preventDefault();
-      this.saveTestCase();
     },
     refreshEnvironment() {
       this.$refs.environmentSelect.refreshEnvironment();
@@ -101,6 +104,7 @@ export default {
         this.$emit('setEnvironment', data.id);
       }
     },
+
     open() {
       this.$refs.searchBar.open();
     },

@@ -28,12 +28,15 @@ import io.metersphere.performance.dto.LoadTestExportJmx;
 import io.metersphere.performance.engine.Engine;
 import io.metersphere.performance.engine.EngineFactory;
 import io.metersphere.service.FileService;
+import io.metersphere.service.QuotaService;
 import io.metersphere.service.TestResourceService;
 import io.metersphere.track.service.TestPlanLoadCaseService;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.ibatis.session.SqlSession;
 import org.apache.ibatis.session.SqlSessionFactory;
+import org.redisson.api.RLock;
+import org.redisson.api.RedissonClient;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -42,6 +45,7 @@ import javax.servlet.ServletOutputStream;
 import javax.servlet.http.HttpServletResponse;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.math.BigDecimal;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -74,6 +78,10 @@ public class PerformanceReportService {
     private SqlSessionFactory sqlSessionFactory;
     @Resource
     private TestResourcePoolMapper testResourcePoolMapper;
+    @Resource
+    private RedissonClient redissonClient;
+    @Resource
+    private ProjectMapper projectMapper;
 
     public List<ReportDTO> getRecentReportList(ReportRequest request) {
         List<OrderRequest> orders = new ArrayList<>();
@@ -111,9 +119,11 @@ public class PerformanceReportService {
                 boolean isRunning = StringUtils.equals(reportStatus, PerformanceTestStatus.Running.name());
                 boolean isStarting = StringUtils.equals(reportStatus, PerformanceTestStatus.Starting.name());
                 boolean isError = StringUtils.equals(reportStatus, PerformanceTestStatus.Error.name());
-                if (isRunning || isStarting || isError) {
+                if (isError) {
                     LogUtil.info("Start stop engine, report status: %s" + reportStatus);
                     stopEngine(loadTest, engine);
+                } else if (isRunning || isStarting) {
+                    stopEngineHandleVum(loadTestReport, engine);
                 }
             } catch (Exception e) {
                 LogUtil.error(e.getMessage(), e);
@@ -142,6 +152,11 @@ public class PerformanceReportService {
         example.createCriteria().andReportIdEqualTo(reportId);
         loadTestReportDetailMapper.deleteByExample(example);
 
+        // delete load_test_report_log
+        LoadTestReportLogExample loadTestReportLogExample = new LoadTestReportLogExample();
+        loadTestReportLogExample.createCriteria().andReportIdEqualTo(reportId);
+        loadTestReportLogMapper.deleteByExample(loadTestReportLogExample);
+
         // delete jtl file
         fileService.deleteFileById(loadTestReport.getFileId());
 
@@ -155,6 +170,31 @@ public class PerformanceReportService {
         engine.stop();
         loadTest.setStatus(PerformanceTestStatus.Saved.name());
         loadTestMapper.updateByPrimaryKeySelective(loadTest);
+    }
+
+    public void stopEngineHandleVum(LoadTestReportWithBLOBs report, Engine engine) {
+        LoadTestWithBLOBs loadTest = loadTestMapper.selectByPrimaryKey(report.getTestId());
+        QuotaService quotaService = CommonBeanFactory.getBean(QuotaService.class);
+        String projectId = report.getProjectId();
+        Project project = projectMapper.selectByPrimaryKey(projectId);
+        if (project == null || StringUtils.isBlank(project.getWorkspaceId())) {
+            MSException.throwException("project is null or workspace_id of project is null. project id: " + projectId);
+        }
+        RLock lock = redissonClient.getLock(project.getWorkspaceId());
+        if (quotaService != null) {
+            try {
+                lock.lock();
+                BigDecimal toReduceVum = quotaService.getReduceVumUsed(report);
+                if (toReduceVum.compareTo(BigDecimal.ZERO) != 0) {
+                    quotaService.updateVumUsed(projectId, toReduceVum.negate());
+                }
+                engine.stop();
+                loadTest.setStatus(PerformanceTestStatus.Saved.name());
+                loadTestMapper.updateByPrimaryKeySelective(loadTest);
+            } finally {
+                lock.unlock();
+            }
+        }
     }
 
     public ReportDTO getReportTestAndProInfo(String reportId) {
@@ -179,6 +219,9 @@ public class PerformanceReportService {
         String reportValue = getContent(id, ReportKeys.RequestStatistics);
         // 确定顺序
         List<Statistics> statistics = JSON.parseArray(reportValue, Statistics.class);
+        if (CollectionUtils.isEmpty(statistics)) {
+            return Collections.emptyList();
+        }
         List<LoadTestExportJmx> jmxContent = getJmxContent(id);
         String jmx = jmxContent.get(0).getJmx();
         // 按照JMX顺序重新排序
@@ -349,15 +392,13 @@ public class PerformanceReportService {
 
     public void deleteReportBatch(DeleteReportRequest request) {
         ServiceUtils.getSelectAllIds(request, request.getCondition(),
-                (query) -> getLoadTestReportIds(request.getProjectId()));
+                (query) -> getLoadTestReportIds(request.getCondition()));
 
         List<String> ids = request.getIds();
         ids.forEach(this::deleteReport);
     }
 
-    private List<String> getLoadTestReportIds(String projectId) {
-        ReportRequest request = new ReportRequest();
-        request.setProjectId(projectId);
+    private List<String> getLoadTestReportIds(ReportRequest request) {
         return this.getReportList(request).stream().map(LoadTestReport::getId).collect(Collectors.toList());
     }
 

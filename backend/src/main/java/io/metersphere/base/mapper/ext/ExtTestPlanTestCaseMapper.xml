@@ -246,7 +246,7 @@
         test_case.custom_num) as customNum, test_plan_test_case.executor, test_plan_test_case.status,
         test_plan_test_case.actual_result,
         test_plan_test_case.update_time, test_plan_test_case.create_time,test_case_node.name as model, project.name as
-        projectName,test_plan_test_case.issues as issues,test_plan_test_case.issues_count as issuesCount,
+        projectName, test_plan_test_case.issues_count as issuesCount,
         test_plan_test_case.plan_id as planId,test_case.version_id as versionId,
         project_version.name as versionName
         from test_plan_test_case
@@ -383,6 +383,7 @@
         select test_case.remark,
                test_plan_test_case.id as id,
                test_plan_test_case.*,
+               if(pa.type_value = 'false', cast(test_case.num as char), test_case.custom_num) as customNum,
                test_case.*,
                test_case_node.name    as model,
                project.name           as projectName
@@ -390,7 +391,8 @@
                  inner join test_case on test_plan_test_case.case_id = test_case.id
                  left join test_case_node on test_case_node.id = test_case.node_id
                  inner join project on project.id = test_case.project_id
-        where test_plan_test_case.id = #{testPlanTestCaseId}
+                 inner join project_application pa on project.id = pa.project_id and pa.type = 'CASE_CUSTOM_NUM'
+                 where test_plan_test_case.id = #{testPlanTestCaseId}
     </select>
 
     <select id="getExecResultByPlanId" resultType="java.lang.String">
@@ -502,7 +504,7 @@
             and tptc.status = 'Failure'
         </if>
         and (tc.status != 'Trash' or tc.status is null)
-        where tptc.plan_id = #{planId} order by tptc.update_time desc
+        where tptc.plan_id = #{planId} order by tptc.`order` desc
     </select>
     <update id="updateTestCaseStates" parameterType="java.lang.String">
         update test_plan_test_case

@@ -36,7 +36,7 @@ export default {
     close_schedule: '關閉定時任務',
     open_schedule: '開啟定時任務',
     schedule_switch: '定時任務開關',
-    schedule_cron_title: '定時任務時間運算式',
+    schedule_cron_title: 'Cron運算式',
     review_complete: '評審完成',
     examples: '示例',
     help_documentation: '幫助文檔',
@@ -44,8 +44,8 @@ export default {
     confirm_delete: '是否刪除',
     delete_cancelled: '已取消刪除',
     workspace: '工作空間',
-    space:'空間',
-    current_workspace:"當前工作空間",
+    space: '空間',
+    current_workspace: "當前工作空間",
     organization: '組織',
     setting: '設置',
     project: '項目',
@@ -73,6 +73,7 @@ export default {
     confirm_info: '未保存，是否確認關閉？',
     track: '用例',
     actuator: '執行器',
+    task_center_remark: '調試歷史只展示最近的五條數據',
     from: '由',
     prompt: '提示',
     operating: '操作',
@@ -101,6 +102,7 @@ export default {
     personal_info: '個人信息',
     api_keys: 'API Keys',
     third_account: '第三方平臺賬號',
+    ui_setting: 'UI 設置',
     quota: '配額管理',
     status: '狀態',
     show_all: '顯示全部',
@@ -122,6 +124,7 @@ export default {
     view_settings: '顯示設置',
     functional: '功能測試',
     my_workstation: '我的工作臺',
+    ui_test: 'UI測試',
     input_content: '請輸入內容',
     create: '新建',
     edit: '編輯',
@@ -446,6 +449,7 @@ export default {
     delete_all_version: '全部版本',
     change_password_tips: '您的密碼是系統初始密碼，請盡快修改密碼',
     ui: 'UI 測試',
+    not_eligible_for_deletion:'不符合删除條件'
   },
   login: {
     normal_Login: "普通登錄",
@@ -464,6 +468,7 @@ export default {
     status: '授權狀態',
     valid: '有效',
     invalid: '無效',
+    count_warning: '系統用戶數已超過license限制數量，請盡快聯繫工作人員。',
     expired: '已過期',
   },
   workstation: {
@@ -605,6 +610,8 @@ export default {
       env_list: "環境列表",
       confirm: "確 定",
       please_select_env_for_current_scenario: "請為當前場景選擇一個運行環境！",
+      please_select_env_for_current_plan: "請為當前测试计划選擇一個運行環境！",
+      please_select_run_within_resource_pool: "請選擇一個資源池",
       lack_env: "環境組缺少環境！",
       lack_necessary_environment: "此環境組缺少必要的項目環境！",
       available_group: '可用環境組',
@@ -641,6 +648,7 @@ export default {
       nail_robot: '釘釘機器人',
       enterprise_wechat_robot: '企業微信機器人',
       lark: '飛書機器人',
+      webhook: '自定義 Webhook',
       notes: '1.企業微信、釘釘及飛書通知需要新建一個自定義機器人，然後復制 webhook 地址在我們平台上;<br/>' +
         '2.需要安全驗證的機器人可以選擇 “自定義關鍵詞” 驗證，關鍵詞為 “消息通知”;<br/>' +
         '3.如需在通知中使用@功能，選擇的接收人必須是機器人所在群裡包含的用戶，接收人手機號為必填項且為釘釘企業所使用的手機號',
@@ -900,6 +908,7 @@ export default {
     permission: '權限',
     please_select_group: '請選擇用戶組',
     global: '全局',
+    unable_to_remove_current_member: '無法移除當前登錄用戶！',
     ws_admin_global: '工作空間管理員才可以創建全局用戶組'
   },
   role: {
@@ -1133,6 +1142,7 @@ export default {
     please_select_case: "請選擇用例",
     fail_to_stop: "失敗停止",
     batch_add_parameter: "格式：參數名:參數值 <br/> 如：Accept-Encoding:utf-8",
+    create_performance_test_tips: '沒有創建性能測試的權限，無法完成此操作',
     jar_config: {
       title: "上傳jar包",
       jar_file: "jar包",
@@ -1251,6 +1261,7 @@ export default {
         delete_case_confirm: "確認刪除用例",
         delete_confirm_step: "確認刪除步驟",
         assertions_rule: "斷言規則",
+        scenario_assertions: "場景斷言",
         pre_operation: "前置操作",
         post_operation: "後置操作",
         response_header: "響應頭",
@@ -1613,6 +1624,7 @@ export default {
         set_failure_msg: "設置失敗消息",
         suggest_tip: "點擊便簽添加JSONPath斷言",
         regex_info: '特殊字符"$ ( ) * + . [ ] \\ ^ { } |"需轉義為"\\ "+"特殊字符",如"\\$"',
+        xpath_info: '根據請求響應內容格式，選擇提取方式',
         regular_match: '正則匹配',
         none: '不校驗[]',
         value_eq: '值-等於[value=]',
@@ -2449,6 +2461,10 @@ export default {
     usage: '用途',
     backend_listener: '後置監聽器',
     batch_add_resource_tips: '格式：IP,Port,Monitor,最大並發數<br/>如：192.168.1.52,8082,9100,500',
+    k8s_sa_tips: '使用K8S資源池需要的權限',
+    k8s_sa_download_tips: '下載SA執行文件',
+    k8s_deploy_type_tips: '執行接口測試需要部署 DaemonSet 或 Deployment',
+    k8s_deploy_download_tips: '下載YAML執行文件',
   },
   system_parameter_setting: {
     mailbox_service_settings: '郵件設置',
@@ -2467,6 +2483,7 @@ export default {
     account: '賬戶不能為空',
     test_recipients: '測試收件人',
     tip: '提示：僅用來作為測試郵件收件人',
+    from_tip: '注：必須是郵件服務器驗證通過的郵箱，否則默認為SMTP賬戶發送'
   },
   i18n: {
     home: '首頁',
@@ -2523,9 +2540,10 @@ export default {
     edit_timer_task: "編輯定時任務",
     task_config: "任務配置",
     please_input_cron_expression: "請輸入 Cron 表達式",
-    generate_expression: "生成表達式",
+    generate_expression: "自动生成",
     cron_expression_format_error: "Cron 表達式格式錯誤",
     cron_expression_interval_short_error: "間隔時間小於 3 分鐘, 請避免執行耗時過長的測試",
+    cron_expression_interval_error: "間隔時間不能小於 1 分鐘",
     cron: {
       seconds: "秒",
       minutes: "分鐘",
@@ -2561,13 +2579,13 @@ export default {
   },
   quota: {
     default: {
-      organization: "組織默認配額",
+      project: "項目默認配額",
       workspace: "工作空間默認配額",
     },
     api: "接口測試數量",
     performance: "性能測試數量",
     resource_pool: "可用測試資源池",
-    max_threads: "最大並發數",
+    max_threads: "同一時段最大並發數",
     duration: "壓測時長(秒)",
     use_default: "使用默認配額",
     yes: "是",
@@ -2578,6 +2596,11 @@ export default {
     edit_quota_title: "{0}的配額",
     workspace_quota_list: "{0}的工作空間配額列表",
     unlimited: "無限製",
+    member: "成員數",
+    project: "項目數",
+    vum_total: "總vum數量",
+    vum_used: "消耗vum數量",
+    vum_tip: "vum(並發數 * 持續時間)：一個並髮用戶執行一分鐘消耗1vum",
     clean: "清空"
   },
   schema: {
@@ -2685,10 +2708,12 @@ export default {
     api_definition: "接口定義",
     api_definition_case: "接口定義用例",
     api_automation: "接口自動化",
+    api_automation_schedule: '接口自動化-定時任務',
     api_automation_report: "測試報告",
     track_test_case: "測試用例",
     track_test_case_review: "用例評審",
     track_test_plan: "測試計劃",
+    track_test_plan_schedule: "測試計劃-定時任務",
     track_bug: "缺陷管理",
     track_report: "報告",
     performance_test: "性能測試",
@@ -2842,6 +2867,11 @@ export default {
     workspace_service: {
       name: "服務集成",
       read: "查詢",
+      edit: "編輯"
+    },
+    workspace_quota: {
+      name: "配額管理",
+      read: "查詢配額",
       edit: "編輯"
     },
     project_message: {
@@ -3038,12 +3068,27 @@ export default {
       create_performance: "創建性能測試",
       create_performance_batch: "批量創建性能測試",
       batch_copy: "批量復製",
+      open_url_content: "根據 URL, 打開指定的操作頁面"
     },
     project_api_report: {
       name: "測試報告",
       read: "查詢報告",
       delete: "刪除報告",
       export: "導出報告",
+    },
+    project_ui_report: {
+      name: "測試報告",
+      read: "查詢報告",
+      delete: "刪除報告",
+      share: "分享報告",
+    },
+    project_ui_element: {
+      name: "元素庫",
+      read: "查詢元素",
+      create: "創建元素",
+      edit: "編輯元素",
+      delete: "刪除元素",
+      copy: "複製元素",
     },
     project_performance_test: {
       name: "測試",
@@ -3091,6 +3136,7 @@ export default {
       api_keys: 'API Keys',
       edit_password: "修改密碼",
       third_account: '第三方平臺賬號',
+      ui_setting: 'UI 設置',
     },
     other: {
       track: "測試跟蹤",
@@ -3110,6 +3156,8 @@ export default {
     tips:"注：在\"項目設置-設置環境-全局斷言\"中啟用誤報將進行以下規則匹配",
     use_error_report: "啟用誤報",
     use_desc: "失敗斷言與誤報規則衝突時統一處理為誤報",
+    conflict_with_success: "請求同時包含誤報和成功斷言，請求結果處理為：",
+    conflict_with_error: "請求同時包含誤報和失敗斷言，請求結果處理為：",
     option: {
       name: "誤報",
       error_code: "誤報名稱",
@@ -3127,5 +3175,8 @@ export default {
     ui_automation: "UI 自動化",
     ui_element: "元素庫",
     report: "測試報告",
+    ui_debug_mode: 'UI自動化調試管道',
+    ui_local_debug: '本地調試',
+    ui_server_debug: '後端調試',
   }
 };

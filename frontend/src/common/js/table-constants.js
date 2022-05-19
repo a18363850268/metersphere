@@ -24,7 +24,7 @@ export const UI_ELEMENT_LOCATION_TYPE_OPTION = [
   {value: 'name', text: 'name'},
   {value: 'className', text: 'class'},
   {value: 'tagName', text: 'tag'},
-  {value: 'linkText', text: 'link'},
+  {value: 'linkText', text: 'linkText'},
   {value: 'partialLinkText', text: 'plink'},
   {value: 'css', text: 'css'},
   {value: 'xpath', text: 'xpath'},
@@ -105,8 +105,11 @@ export function API_SCENARIO_FILTERS () {
       {text: i18n.t('test_track.plan.plan_status_prepare'), value: 'Prepare'},
       {text: i18n.t('test_track.plan.plan_status_running'), value: 'Underway'},
       {text: i18n.t('test_track.plan.plan_status_completed'), value: 'Completed'},
+    ],
+    TRASH_FILTERS: [
       {text: i18n.t('test_track.plan.plan_status_trash'), value: 'Trash'},
     ],
+
     LEVEL_FILTERS: [
       {text: 'P0', value: 'P0'},
       {text: 'P1', value: 'P1'},

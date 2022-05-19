@@ -13,10 +13,12 @@ public class OperLogModule {
     public static final String WORKSPACE_TEMPLATE_SETTINGS_CASE = "WORKSPACE_TEMPLATE_SETTINGS_CASE";
     public static final String WORKSPACE_MEMBER = "WORKSPACE_MEMBER";
     public static final String API_AUTOMATION = "API_AUTOMATION";
+    public static final String API_AUTOMATION_SCHEDULE = "API_AUTOMATION_SCHEDULE";
     public static final String API_AUTOMATION_REPORT = "API_AUTOMATION_REPORT";
     public static final String API_DEFINITION = "API_DEFINITION";
     public static final String API_DEFINITION_CASE = "API_DEFINITION_CASE";
     public static final String TRACK_TEST_PLAN = "TRACK_TEST_PLAN";
+    public static final String TRACK_TEST_PLAN_SCHEDULE = "TRACK_TEST_PLAN_SCHEDULE";
     public static final String TRACK_BUG = "TRACK_BUG";
     public static final String TRACK_TEST_CASE_REVIEW = "TRACK_TEST_CASE_REVIEW";
     public static final String TRACK_TEST_CASE = "TRACK_TEST_CASE";
@@ -36,8 +38,9 @@ public class OperLogModule {
     public static final String SYSTEM_QUOTA_MANAGEMENT = "SYSTEM_QUOTA_MANAGEMENT";
     public static final String ENTERPRISE_TEST_REPORT = "ENTERPRISE_TEST_REPORT";
     public static final String SYSTEM_AUTHORIZATION_MANAGEMENT = "SYSTEM_AUTHORIZATION_MANAGEMENT";
-
-
+    public static final String UI_ELEMENT = "UI_ELEMENT";
+    public static final String UI_AUTOMATION = "UI_AUTOMATION";
+    public static final String UI_AUTOMATION_REPORT = "UI_AUTOMATION_REPORT";
 
 
 }

@@ -64,13 +64,13 @@ public class GroupService {
 
     private static final String GLOBAL = "global";
 
-    private static final Map<String, List<String>> map = new HashMap<String, List<String>>(4) {{
+    private static final Map<String, List<String>> map = new HashMap<>(4) {{
         put(UserGroupType.SYSTEM, Arrays.asList(UserGroupType.SYSTEM, UserGroupType.WORKSPACE, UserGroupType.PROJECT));
         put(UserGroupType.WORKSPACE, Arrays.asList(UserGroupType.WORKSPACE, UserGroupType.PROJECT));
         put(UserGroupType.PROJECT, Collections.singletonList(UserGroupType.PROJECT));
     }};
 
-    private static final Map<String, String> typeMap = new HashMap<String, String>(4) {{
+    private static final Map<String, String> typeMap = new HashMap<>(4) {{
         put(UserGroupType.SYSTEM, "系统");
         put(UserGroupType.WORKSPACE, "工作空间");
         put(UserGroupType.PROJECT, "项目");
@@ -81,6 +81,17 @@ public class GroupService {
         List<UserGroupDTO> userGroup = extUserGroupMapper.getUserGroup(Objects.requireNonNull(user).getId(), request.getProjectId());
         List<String> groupTypeList = userGroup.stream().map(UserGroupDTO::getType).distinct().collect(Collectors.toList());
         return getGroups(groupTypeList, request);
+    }
+
+    public void buildUserInfo(List<GroupDTO> testCases) {
+        List<String> userIds = new ArrayList();
+        userIds.addAll(testCases.stream().map(GroupDTO::getCreator).collect(Collectors.toList()));
+        if (!userIds.isEmpty()) {
+            Map<String, String> userMap = ServiceUtils.getUserNameMap(userIds);
+            testCases.forEach(caseResult -> {
+                caseResult.setCreator(userMap.get(caseResult.getCreator()));
+            });
+        }
     }
 
     public Group addGroup(EditGroupRequest request) {
@@ -313,6 +324,7 @@ public class GroupService {
         request.setScopes(scopes);
 //        request.setOrders(ServiceUtils.getDefaultOrder(request.getOrders()));
         List<GroupDTO> groups = extGroupMapper.getGroupList(request);
+        buildUserInfo(groups);
         return PageUtils.setPageInfo(page, groups);
     }
 
@@ -429,8 +441,10 @@ public class GroupService {
             userGroup.setUpdateTime(System.currentTimeMillis());
             userGroupMapper.insertSelective(userGroup);
         } else {
+            QuotaService quotaService = CommonBeanFactory.getBean(QuotaService.class);
             SqlSession sqlSession = sqlSessionFactory.openSession(ExecutorType.BATCH);
             UserGroupMapper mapper = sqlSession.getMapper(UserGroupMapper.class);
+            checkQuota(quotaService, type, sourceIds, 1);
             for (String sourceId : sourceIds) {
                 UserGroup userGroup = new UserGroup();
                 userGroup.setId(UUID.randomUUID().toString());
@@ -445,6 +459,13 @@ public class GroupService {
             if (sqlSession != null && sqlSessionFactory != null) {
                 SqlSessionUtils.closeSqlSession(sqlSession, sqlSessionFactory);
             }
+        }
+    }
+
+    private void checkQuota(QuotaService quotaService, String type, List<String> sourceIds, int size) {
+        if (quotaService != null) {
+            Map<String, Integer> addMemberMap = sourceIds.stream().collect(Collectors.toMap( id -> id, id -> size));
+            quotaService.checkMemberCount(addMemberMap, type);
         }
     }
 

@@ -16,14 +16,12 @@ import io.metersphere.commons.utils.*;
 import io.metersphere.controller.request.IntegrationRequest;
 import io.metersphere.dto.CustomFieldDao;
 import io.metersphere.dto.IssueTemplateDao;
+import io.metersphere.i18n.Translator;
 import io.metersphere.log.utils.ReflexObjectUtil;
 import io.metersphere.log.vo.DetailColumn;
 import io.metersphere.log.vo.OperatingLogDetails;
 import io.metersphere.log.vo.track.TestPlanReference;
-import io.metersphere.service.CustomFieldTemplateService;
-import io.metersphere.service.IntegrationService;
-import io.metersphere.service.IssueTemplateService;
-import io.metersphere.service.ProjectService;
+import io.metersphere.service.*;
 import io.metersphere.track.dto.*;
 import io.metersphere.track.issue.*;
 import io.metersphere.track.issue.domain.PlatformUser;
@@ -77,6 +75,10 @@ public class IssuesService {
     private IssueFollowMapper issueFollowMapper;
     @Resource
     private TestPlanTestCaseMapper testPlanTestCaseMapper;
+    @Resource
+    private CustomFieldIssuesService customFieldIssuesService;
+    @Resource
+    private CustomFieldIssuesMapper customFieldIssuesMapper;
 
     public void testAuth(String workspaceId, String platform) {
         IssuesRequest issuesRequest = new IssuesRequest();
@@ -98,6 +100,7 @@ public class IssuesService {
             });
         }
         saveFollows(issuesRequest.getId(), issuesRequest.getFollows());
+        customFieldIssuesService.addFields(issuesRequest.getId(), issuesRequest.getAddFields());
         return issues;
     }
 
@@ -108,6 +111,8 @@ public class IssuesService {
         platformList.forEach(platform -> {
             platform.updateIssue(issuesRequest);
         });
+        customFieldIssuesService.editFields(issuesRequest.getId(), issuesRequest.getEditFields());
+        customFieldIssuesService.addFields(issuesRequest.getId(), issuesRequest.getAddFields());
         // todo 缺陷更新事件？
     }
 
@@ -177,13 +182,8 @@ public class IssuesService {
             ZentaoPlatform zentaoPlatform = (ZentaoPlatform) IssueFactory.createPlatform(IssuesManagePlatform.Zentao.name(), issuesRequest);
             zentaoPlatform.getZentaoAssignedAndBuilds(issuesWithBLOBs);
         }
+        buildCustomField(issuesWithBLOBs);
         return issuesWithBLOBs;
-    }
-
-    public String getPlatformsByCaseId(String caseId) {
-        TestCaseWithBLOBs testCase = testCaseService.getTestCase(caseId);
-        Project project = projectService.getProjectById(testCase.getProjectId());
-        return getPlatform(project.getId());
     }
 
     public String getPlatform(String projectId) {
@@ -223,32 +223,6 @@ public class IssuesService {
         return platforms;
     }
 
-    private Project getProjectByCaseId(String testCaseId) {
-        TestCaseWithBLOBs testCase = testCaseService.getTestCase(testCaseId);
-        // testCase 不存在
-        if (testCase == null) {
-            return null;
-        }
-        return projectService.getProjectById(testCase.getProjectId());
-    }
-
-    private String getTapdProjectId(String testCaseId) {
-        TestCaseWithBLOBs testCase = testCaseService.getTestCase(testCaseId);
-        Project project = projectService.getProjectById(testCase.getProjectId());
-        return project.getTapdId();
-    }
-
-    private String getJiraProjectKey(String testCaseId) {
-        TestCaseWithBLOBs testCase = testCaseService.getTestCase(testCaseId);
-        Project project = projectService.getProjectById(testCase.getProjectId());
-        return project.getJiraKey();
-    }
-
-    private String getZentaoProjectId(String testCaseId) {
-        TestCaseWithBLOBs testCase = testCaseService.getTestCase(testCaseId);
-        Project project = projectService.getProjectById(testCase.getProjectId());
-        return project.getZentaoId();
-    }
 
     /**
      * 是否关联平台
@@ -288,6 +262,7 @@ public class IssuesService {
                 testCaseIssueService.updateIssuesCount(i.getResourceId());
             }
         });
+        customFieldIssuesService.deleteByResourceId(id);
         testCaseIssuesMapper.deleteByExample(example);
     }
 
@@ -337,8 +312,15 @@ public class IssuesService {
     }
 
     public List<ZentaoBuild> getZentaoBuilds(IssuesRequest request) {
-        ZentaoPlatform platform = (ZentaoPlatform) IssueFactory.createPlatform(IssuesManagePlatform.Zentao.name(), request);
-        return platform.getBuilds();
+        try {
+            ZentaoPlatform platform = (ZentaoPlatform) IssueFactory.createPlatform(IssuesManagePlatform.Zentao.name(), request);
+            return platform.getBuilds();
+        } catch (Exception e) {
+            LogUtil.error("get zentao builds fail.");
+            LogUtil.error(e.getMessage(), e);
+            MSException.throwException(Translator.get("zentao_get_project_builds_fail"));
+        }
+        return null;
     }
 
     public List<IssuesDao> list(IssuesRequest request) {
@@ -366,7 +348,32 @@ public class IssuesService {
             item.setCaseIds(new ArrayList<>(caseIdSet));
             item.setCaseCount(caseIdSet.size());
         });
+        buildCustomField(issues);
         return issues;
+    }
+
+    private void buildCustomField(List<IssuesDao> data) {
+        if (CollectionUtils.isEmpty(data)) {
+            return;
+        }
+        Map<String, List<CustomFieldDao>> fieldMap =
+                customFieldIssuesService.getMapByResourceIds(data.stream().map(IssuesDao::getId).collect(Collectors.toList()));
+        data.forEach(i -> i.setFields(fieldMap.get(i.getId())));
+    }
+
+    private void buildCustomField(IssuesDao data) {
+        CustomFieldIssuesExample example = new CustomFieldIssuesExample();
+        example.createCriteria().andResourceIdEqualTo(data.getId());
+        List<CustomFieldIssues> customFieldTestCases = customFieldIssuesMapper.selectByExample(example);
+        List<CustomFieldDao> fields = new ArrayList<>();
+        customFieldTestCases.forEach(i -> {
+            CustomFieldDao customFieldDao = new CustomFieldDao();
+            customFieldDao.setId(i.getFieldId());
+            customFieldDao.setValue(i.getValue());
+            customFieldDao.setTextValue(i.getTextValue());
+            fields.add(customFieldDao);
+        });
+        data.setFields(fields);
     }
 
     private Map<String, String> getPlanMap(List<IssuesDao> issues) {
@@ -406,10 +413,10 @@ public class IssuesService {
             } else {
                 caseIdSet.add(i.getResourceId());
             }
-            if(map.get(i.getId())!=null){
-                map.get(i.getId()).addAll(caseIdSet);
+            if(map.get(i.getIssuesId())!=null){
+                map.get(i.getIssuesId()).addAll(caseIdSet);
             }else{
-                map.put(i.getId(),caseIdSet);
+                map.put(i.getIssuesId(),caseIdSet);
             }
         });
         return map;

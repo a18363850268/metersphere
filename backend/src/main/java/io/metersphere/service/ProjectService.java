@@ -6,7 +6,6 @@ import io.metersphere.api.dto.QueryAPITestRequest;
 import io.metersphere.api.service.APITestService;
 import io.metersphere.api.service.ApiScenarioReportService;
 import io.metersphere.api.service.ApiTestDelService;
-import io.metersphere.api.service.ApiTestEnvironmentService;
 import io.metersphere.api.tcp.TCPPool;
 import io.metersphere.base.domain.*;
 import io.metersphere.base.mapper.*;
@@ -113,7 +112,8 @@ public class ProjectService {
     private ProjectApplicationMapper projectApplicationMapper;
     @Resource
     private ProjectApplicationService projectApplicationService;
-
+    @Resource
+    private ProjectVersionMapper projectVersionMapper;
 
     public Project addProject(AddProjectRequest project) {
         if (StringUtils.isBlank(project.getName())) {
@@ -127,6 +127,11 @@ public class ProjectService {
             MSException.throwException(Translator.get("project_name_already_exists"));
         }
 
+        QuotaService quotaService = CommonBeanFactory.getBean(QuotaService.class);
+        if (quotaService != null) {
+            quotaService.checkWorkspaceProject(project.getWorkspaceId());
+        }
+
         if (project.getMockTcpPort() != null && project.getMockTcpPort().intValue() > 0) {
             this.checkMockTcpPort(project.getMockTcpPort().intValue());
         }
@@ -138,7 +143,8 @@ public class ProjectService {
         if (StringUtils.isBlank(project.getPlatform())) {
             project.setPlatform(IssuesManagePlatform.Local.name());
         }
-        project.setId(UUID.randomUUID().toString());
+        String pjId = UUID.randomUUID().toString();
+        project.setId(pjId);
 
         String systemId = this.genSystemId();
         long createTime = System.currentTimeMillis();
@@ -163,22 +169,38 @@ public class ProjectService {
         // 设置默认的通知
         extProjectMapper.setDefaultMessageTask(project.getId());
 
-        ProjectVersionService projectVersionService = CommonBeanFactory.getBean(ProjectVersionService.class);
-        if (projectVersionService != null) {
-            ProjectVersion projectVersion = new ProjectVersion();
-            projectVersion.setId(UUID.randomUUID().toString());
-            projectVersion.setName("v1.0.0");
-            projectVersion.setProjectId(project.getId());
-            projectVersion.setCreateTime(System.currentTimeMillis());
-            projectVersion.setCreateTime(System.currentTimeMillis());
-            projectVersion.setStartTime(System.currentTimeMillis());
-            projectVersion.setPublishTime(System.currentTimeMillis());
-            projectVersion.setLatest(true);
-            projectVersion.setStatus("open");
-            projectVersionService.addProjectVersion(projectVersion);
+        if (quotaService != null) {
+            quotaService.projectUseDefaultQuota(pjId);
         }
+        // 创建默认版本
+        addProjectVersion(project);
+        // 初始化项目应用管理
         initProjectApplication(project.getId());
         return project;
+    }
+
+    public void addProjectVersion(Project project) {
+        ProjectVersion projectVersion = new ProjectVersion();
+        projectVersion.setId(UUID.randomUUID().toString());
+        projectVersion.setName("v1.0.0");
+        projectVersion.setProjectId(project.getId());
+        projectVersion.setCreateTime(System.currentTimeMillis());
+        projectVersion.setCreateTime(System.currentTimeMillis());
+        projectVersion.setStartTime(System.currentTimeMillis());
+        projectVersion.setPublishTime(System.currentTimeMillis());
+        projectVersion.setLatest(true);
+        projectVersion.setStatus("open");
+
+        String name = projectVersion.getName();
+        ProjectVersionExample example = new ProjectVersionExample();
+        example.createCriteria().andProjectIdEqualTo(projectVersion.getProjectId()).andNameEqualTo(name);
+        if (projectVersionMapper.countByExample(example) > 0) {
+            MSException.throwException("当前版本已经存在");
+        }
+        projectVersion.setId(UUID.randomUUID().toString());
+        projectVersion.setCreateUser(SessionUtils.getUserId());
+        projectVersion.setCreateTime(System.currentTimeMillis());
+        projectVersionMapper.insertSelective(projectVersion);
     }
 
     private void initProjectApplication(String projectId) {
@@ -334,13 +356,7 @@ public class ProjectService {
      * @param projectId
      */
     public void updateCaseTemplate(String originId, String templateId, String projectId) {
-        Project project = new Project();
-        project.setCaseTemplateId(templateId);
-        ProjectExample example = new ProjectExample();
-        example.createCriteria()
-                .andCaseTemplateIdEqualTo(originId)
-                .andIdEqualTo(projectId);
-        projectMapper.updateByExampleSelective(project, example);
+        extProjectMapper.updateUseDefaultCaseTemplateProject(originId, templateId, projectId);
     }
 
     private void deleteLoadTestResourcesByProjectId(String projectId) {
@@ -754,6 +770,10 @@ public class ProjectService {
 
     public List<String> getProjectIds() {
         return extProjectMapper.getProjectIds();
+    }
+
+    public List<Project> getProjectForCustomField(String workspaceId) {
+        return extProjectMapper.getProjectForCustomField(workspaceId);
     }
 
     public Map<String, Project> queryNameByIds(List<String> ids) {

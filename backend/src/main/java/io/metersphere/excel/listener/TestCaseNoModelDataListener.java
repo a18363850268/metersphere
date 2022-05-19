@@ -14,6 +14,7 @@ import io.metersphere.dto.CustomFieldDao;
 import io.metersphere.excel.annotation.NotRequired;
 import io.metersphere.excel.domain.ExcelErrData;
 import io.metersphere.excel.domain.TestCaseExcelData;
+import io.metersphere.excel.domain.TestCaseExcelDataFactory;
 import io.metersphere.excel.utils.ExcelValidateHelper;
 import io.metersphere.excel.utils.FunctionCaseImportEnum;
 import io.metersphere.i18n.Translator;
@@ -417,8 +418,9 @@ public class TestCaseNoModelDataListener extends AnalysisEventListener<Map<Integ
         }
         data.setStatus(caseStatusValue);
 
-        String customFieldsJson = this.getCustomFieldsJson(data);
-        testCase.setCustomFields(customFieldsJson);
+        // todo 这里要获取模板的自定义字段再新建关联关系
+//        String customFieldsJson = this.getCustomFieldsJson(data);
+//        testCase.setCustomFields(customFieldsJson);
         if (StringUtils.isNotBlank(data.getMaintainer())) {
             testCase.setMaintainer(data.getMaintainer());
         }
@@ -470,8 +472,9 @@ public class TestCaseNoModelDataListener extends AnalysisEventListener<Map<Integ
         }
         data.setStatus(caseStatusValue);
 
-        String customFieldsJson = this.getCustomFieldsJson(data);
-        testCase.setCustomFields(customFieldsJson);
+        // todo
+//        String customFieldsJson = this.getCustomFieldsJson(data);
+//        testCase.setCustomFields(customFieldsJson);
         if (StringUtils.isNotBlank(data.getMaintainer())) {
             testCase.setMaintainer(data.getMaintainer());
         }
@@ -502,7 +505,7 @@ public class TestCaseNoModelDataListener extends AnalysisEventListener<Map<Integ
             return "[]";
         } catch (Exception e) {
             if (tags != null) {
-                Stream<String> stringStream = Arrays.stream(tags.split("[,;，；]"));  //当标签值以中英文的逗号和分号分隔时才能正确解析
+                Stream<String> stringStream = Arrays.stream(tags.split("[,;，；\"\\r|\\n|\\r\\n\"]"));  //当标签值以中英文的逗号和分号分隔时才能正确解析
                 List<String> tagList = stringStream.map(tag -> tag = "\"" + tag + "\"")
                         .collect(Collectors.toList());
                 String modifiedTags = StringUtils.join(tagList, ",");
@@ -612,7 +615,7 @@ public class TestCaseNoModelDataListener extends AnalysisEventListener<Map<Integ
     }
 
     private TestCaseExcelData parseDataToModel(Map<Integer, String> row) {
-        TestCaseExcelData data = new TestCaseExcelData();
+        TestCaseExcelData data = new TestCaseExcelDataFactory().getTestCaseExcelDataLocal();
         for (Map.Entry<Integer,String> headEntry: headMap.entrySet()) {
             Integer index = headEntry.getKey();
             String field = headEntry.getValue();

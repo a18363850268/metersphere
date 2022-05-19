@@ -60,6 +60,9 @@
         <if test="request.name != null and request.name !=''">
             and user.name like concat('%', #{request.name},'%')
         </if>
+        <if test="request.onlyQueryCurrentProject == true">
+            and ug.source_id = #{request.projectId}
+        </if>
         order by ug.update_time desc
     </select>
 
@@ -77,5 +80,11 @@
                   INNER JOIN `group` g ON ug.group_id = g.id
         order by ug.create_time ASC;
     </select>
-
+    <select id="getProjectMemberOption" resultType="io.metersphere.base.domain.User">
+        SELECT DISTINCT * FROM (
+            SELECT u.id, u.name, u.email FROM user_group JOIN `user` u ON user_group.user_id = u.id
+            WHERE user_group.source_id = #{projectId}
+            order by user_group.update_time desc
+        ) temp
+    </select>
 </mapper>
